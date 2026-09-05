@@ -90,8 +90,11 @@ namespace ABSwitchBack.Revit
                     "This Revit PID: " + pid.ToString(CultureInfo.InvariantCulture) + Environment.NewLine +
                     "Running Navisworks instances: " + navisCount.ToString(CultureInfo.InvariantCulture) + Environment.NewLine +
                     Environment.NewLine +
+                    "Section box: " + (cfg.CreateSectionBox ? "on" : "off") + Environment.NewLine +
                     "Section box margin: " + cfg.SectionBoxMarginMm.ToString("0", CultureInfo.InvariantCulture) + " mm" + Environment.NewLine +
-                    "Section box enabled: " + (cfg.CreateSectionBox ? "yes" : "no") + Environment.NewLine +
+                    "Create a 3D view if needed: " + (cfg.CreateViewIfMissing ? "yes" : "no") + Environment.NewLine +
+                    Environment.NewLine +
+                    "These are changed from the Settings button on the Navisworks ribbon." + Environment.NewLine +
                     Environment.NewLine +
                     "Config and logs: " + Paths.Root;
 
@@ -109,30 +112,6 @@ namespace ABSwitchBack.Revit
             catch (Exception ex)
             {
                 Log.Error("ShowStatusCommand failed.", ex);
-                message = ex.Message;
-                return Result.Failed;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Opens the shared settings dialog. Revit reads the config on every switch-back, so
-    /// changes take effect immediately with no restart.
-    /// </summary>
-    [Transaction(TransactionMode.Manual)]
-    public class SettingsCommand : IExternalCommand
-    {
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
-        {
-            try
-            {
-                IWin32Window owner = new HostWindow(commandData.Application.MainWindowHandle);
-                SettingsForm.Show(owner);
-                return Result.Succeeded;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("SettingsCommand failed.", ex);
                 message = ex.Message;
                 return Result.Failed;
             }

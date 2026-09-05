@@ -66,12 +66,6 @@
     <EmbeddedResource Include="$(RepoRoot)assets\status_32.png">
       <LogicalName>ABSwitchBack.Revit.Resources.status_32.png</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="$(RepoRoot)assets\settings_16.png">
-      <LogicalName>ABSwitchBack.Revit.Resources.settings_16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="$(RepoRoot)assets\settings_32.png">
-      <LogicalName>ABSwitchBack.Revit.Resources.settings_32.png</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="$(RepoRoot)assets\linkedin_16.ico">
       <LogicalName>ABSwitchBack.Revit.Resources.linkedin_16.ico</LogicalName>
     </EmbeddedResource>

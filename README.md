@@ -161,9 +161,13 @@ Uninstall with `build\uninstall.ps1` (add `-PurgeSettings` to also drop logs and
 Revit selects the element, applies a section box with a 1 m margin, zooms to it and comes
 forward.
 
-Both applications get an **AB SwitchBack** ribbon tab carrying the product logo, a **Settings**
-button (trigger gesture, on/off, section box options), a **Status and Log** button (listener and
-trigger state, running instance counts, log folder), an **About** button and a **LinkedIn** link.
+Both applications get an **AB SwitchBack** ribbon tab, with **About** and **LinkedIn**:
+
+| | Navisworks | Revit |
+|---|---|---|
+| **Revit Target** / **Navisworks** | choose the destination Revit | lists running Navisworks instances, with a Test button |
+| **Settings** | trigger gesture, on/off, section box options | — Revit only receives |
+| **Status and Log** | listener and trigger state, log folder | listener state, settings in force, log folder |
 
 ### How the clicked element is identified
 
@@ -215,7 +219,11 @@ CreateViewIfMissing=false
 
 ## Configuration
 
-Use the **Settings** button on the ribbon in either host — there is no need to edit a file.
+Use the **Settings** button on the **Navisworks** ribbon — there is no need to edit a file.
+
+Everything is configured from Navisworks, because that is where the workflow starts. Revit
+only receives, so it carries no Settings button; its **Status and Log** dialog shows the
+settings currently in force, read-only.
 
 The trigger is any combination of **Ctrl**, **Shift** and **Alt** plus a left click, ticked
 from checkboxes, and the whole thing can be switched off. The dialog previews the gesture as
@@ -225,8 +233,8 @@ you build it and warns you about the two combinations worth knowing:
 - **No modifier at all** sends *every* element you select — useful for a dedicated
   coordination session, noisy the rest of the time.
 
-Changes apply immediately; nothing needs restarting. Settings are shared between Revit and
-Navisworks, so it does not matter which side you open the dialog from.
+Changes apply immediately; nothing needs restarting. Revit re-reads the config on every
+switch-back, so the Revit-side options take effect on the very next click.
 
 ### The underlying file
 
