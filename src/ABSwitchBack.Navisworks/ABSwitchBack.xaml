@@ -27,6 +27,12 @@
                               ShowText="True"
                               Orientation="Vertical" />
 
+        <local:NWRibbonButton x:Uid="ABSB_Settings" Id="ID_ABSB_Settings"
+                              Size="Large"
+                              KeyTip="SE"
+                              ShowText="True"
+                              Orientation="Vertical" />
+
         <local:NWRibbonButton x:Uid="ABSB_Status" Id="ID_ABSB_Status"
                               Size="Large"
                               KeyTip="ST"

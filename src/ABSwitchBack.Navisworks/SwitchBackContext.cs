@@ -45,7 +45,7 @@ namespace ABSwitchBack.Navisworks
         private static bool _started;
         private static bool _busy;
 
-        private static ClickTrigger _trigger = ClickTrigger.Ctrl;
+        private static TriggerModifiers _trigger = TriggerGesture.Default;
         private static bool _triggerEnabled;
 
         // Selection tracking. Navisworks reports only that the selection changed, never
@@ -89,22 +89,7 @@ namespace ABSwitchBack.Navisworks
                 _server = new PipeServer(_registry.Self.PipeName, OnMessageReceived);
                 _server.Start();
 
-                _triggerEnabled = cfg.EnableClickHook;
-                _trigger = TriggerGesture.Parse(cfg.Trigger);
-
-                if (_triggerEnabled)
-                {
-                    if (_trigger == ClickTrigger.CtrlShift)
-                    {
-                        Log.Warn("Trigger is Ctrl+Shift+Click. Navisworks intercepts that combination " +
-                                 "and expands the pick to the whole model file; Ctrl+Click is recommended.");
-                    }
-                    Log.Info("Trigger gesture: " + TriggerGesture.Describe(_trigger));
-                }
-                else
-                {
-                    Log.Info("Trigger disabled by configuration.");
-                }
+                ApplySettings(cfg);
 
                 try { NavisApp.ActiveDocumentChanged += OnActiveDocumentChanged; }
                 catch (Exception ex) { Log.Warn("ActiveDocumentChanged subscription failed: " + ex.Message); }
@@ -135,6 +120,50 @@ namespace ABSwitchBack.Navisworks
             finally
             {
                 _started = false;
+            }
+        }
+
+        /// <summary>
+        /// Re-reads the trigger settings. Called at startup and again whenever the user
+        /// saves the settings dialog, so a change takes effect immediately with no restart.
+        /// </summary>
+        public static void ApplySettings(SwitchBackConfig cfg)
+        {
+            if (cfg == null) cfg = SwitchBackConfig.Load();
+
+            _triggerEnabled = cfg.EnableClickHook;
+            _trigger = TriggerGesture.Parse(cfg.Trigger);
+
+            // Anything already captured under the previous gesture is now meaningless.
+            _snapshot = null;
+            _snapshotSkipped = false;
+
+            if (!_triggerEnabled)
+            {
+                Log.Info("Trigger disabled by configuration.");
+                return;
+            }
+
+            if (TriggerGesture.IsReservedByNavisworks(_trigger))
+            {
+                Log.Warn("Trigger includes Ctrl+Shift. Navisworks reserves that combination and " +
+                         "expands the pick to the whole model file; Ctrl+Click is recommended.");
+            }
+
+            Log.Info("Trigger gesture: " + TriggerGesture.Describe(_trigger));
+        }
+
+        /// <summary>Opens the settings dialog and applies the result immediately.</summary>
+        public static void ShowSettings()
+        {
+            try
+            {
+                if (SettingsForm.Show(null)) ApplySettings(null);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Settings dialog failed.", ex);
+                ShowWarning("SwitchBack error", ex.Message);
             }
         }
 
@@ -196,7 +225,7 @@ namespace ABSwitchBack.Navisworks
 
             try
             {
-                if (!TriggerGesture.ModifiersHeld(_trigger)) return;
+                if (!TriggerGesture.AreHeld(_trigger)) return;
 
                 Document doc = NavisApp.ActiveDocument;
                 if (doc == null || doc.IsClear) return;
@@ -239,7 +268,7 @@ namespace ABSwitchBack.Navisworks
             {
                 // The modifiers must still be down: this rules out a change that merely
                 // happened to follow a snapshot.
-                if (!TriggerGesture.ModifiersHeld(_trigger)) return;
+                if (!TriggerGesture.AreHeld(_trigger)) return;
 
                 if (skipped)
                 {

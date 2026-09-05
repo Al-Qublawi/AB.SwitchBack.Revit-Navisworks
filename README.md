@@ -10,7 +10,7 @@ comes to the foreground.
 > expands the pick to the whole model file, so the plugin only ever sees the file node and
 > can never find an element id. Ctrl+Click is Navisworks' normal "add to selection", which
 > resolves to a single element at your configured Selection Resolution. The gesture is
-> configurable via `Trigger` if you need something else.
+> fully configurable from the ribbon **Settings** button if you want something else.
 
 ---
 
@@ -90,7 +90,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -RevitYears 2024 -Navis
 powershell -ExecutionPolicy Bypass -File build\make-msi.ps1
 ```
 
-Produces `dist\ABSwitchBack-1.0.1.msi` — one per-machine package covering every release that
+Produces `dist\ABSwitchBack-1.1.0.msi` — one per-machine package covering every release that
 was compiled into `artifacts\`. Requires the WiX 5 CLI once:
 `dotnet tool install --global wix`.
 
@@ -151,9 +151,9 @@ Uninstall with `build\uninstall.ps1` (add `-PurgeSettings` to also drop logs and
 Revit selects the element, applies a section box with a 1 m margin, zooms to it and comes
 forward.
 
-Both applications get an **AB SwitchBack** ribbon tab carrying the product logo, a
-**Status and Log** button (active trigger, listener and trigger state, running instance counts,
-and a shortcut to the log folder), an **About** button and a **LinkedIn** link.
+Both applications get an **AB SwitchBack** ribbon tab carrying the product logo, a **Settings**
+button (trigger gesture, on/off, section box options), a **Status and Log** button (listener and
+trigger state, running instance counts, log folder), an **About** button and a **LinkedIn** link.
 
 ### How the clicked element is identified
 
@@ -205,6 +205,21 @@ CreateViewIfMissing=false
 
 ## Configuration
 
+Use the **Settings** button on the ribbon in either host — there is no need to edit a file.
+
+The trigger is any combination of **Ctrl**, **Shift** and **Alt** plus a left click, ticked
+from checkboxes, and the whole thing can be switched off. The dialog previews the gesture as
+you build it and warns you about the two combinations worth knowing:
+
+- **Ctrl+Shift** is reserved by Navisworks and expands the pick to the whole model file.
+- **No modifier at all** sends *every* element you select — useful for a dedicated
+  coordination session, noisy the rest of the time.
+
+Changes apply immediately; nothing needs restarting. Settings are shared between Revit and
+Navisworks, so it does not matter which side you open the dialog from.
+
+### The underlying file
+
 `%LOCALAPPDATA%\ABSwitchBack\config.txt` — plain `key=value`, re-read on each switch-back.
 
 | Key | Default | Meaning |
@@ -212,9 +227,8 @@ CreateViewIfMissing=false
 | `SectionBoxMarginMm` | `1000` | Padding around the element, in millimetres |
 | `CreateSectionBox` | `true` | `false` = select and zoom only |
 | `CreateViewIfMissing` | `true` | `false` = never create a 3D view (see *What it changes in your model*) |
-
-| `EnableClickHook` | `true` | `false` disables the Ctrl+click gesture entirely |
-| `Trigger` | `Ctrl` | `Ctrl`, `CtrlShift` or `Alt`. Anything unrecognised falls back to `Ctrl` |
+| `EnableClickHook` | `true` | `false` disables the trigger entirely |
+| `Trigger` | `Ctrl` | Any combination of `Ctrl`, `Shift`, `Alt` (e.g. `Ctrl+Alt`), or `None`. Anything unrecognised falls back to `Ctrl` |
 | `PipeTimeoutMs` | `3000` | Connect/response timeout |
 
 Logs are per process: `%LOCALAPPDATA%\ABSwitchBack\logs\<Role>-<PID>.log`.

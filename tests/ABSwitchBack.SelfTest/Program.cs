@@ -20,10 +20,20 @@ namespace ABSwitchBack.SelfTest
         private static int _passed;
         private static int _failed;
 
+        [STAThread]
         private static int Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
             Log.Init("SelfTest");
+
+            // Lets the settings dialog be opened outside Revit and Navisworks, for a quick
+            // look at the layout without launching a 2 GB host application.
+            if (args != null && Array.IndexOf(args, "--settings") >= 0)
+            {
+                System.Windows.Forms.Application.EnableVisualStyles();
+                Console.WriteLine("Saved: " + ABSwitchBack.Core.UI.SettingsForm.Show(null));
+                return 0;
+            }
 
             Section("1. Protocol round-trip");
             TestProtocol();
@@ -382,35 +392,26 @@ namespace ABSwitchBack.SelfTest
 
         private static void TestTriggerParsing()
         {
-            Assembly plugin = LoadPluginAssembly();
-            if (plugin == null)
-            {
-                Console.WriteLine("      SKIPPED - could not load the Navisworks plugin assembly.");
-                return;
-            }
-
-            Type triggerType = plugin.GetType("ABSwitchBack.Navisworks.TriggerGesture");
-            MethodInfo parse = triggerType == null
-                ? null
-                : triggerType.GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-
-            if (parse == null)
-            {
-                Check("TriggerGesture.Parse is reachable", false);
-                return;
-            }
-
-            // Ctrl is the default and the fallback for anything unrecognised, so a typo in
-            // config.txt can never silently select the broken Ctrl+Shift gesture.
+            // input, expected canonical form. Anything unrecognised must fall back to Ctrl,
+            // so a typo in config.txt can never silently disable the modifier or select the
+            // Ctrl+Shift gesture that Navisworks reserves.
             var cases = new[]
             {
                 Tuple.Create("Ctrl", "Ctrl"),
                 Tuple.Create("ctrl", "Ctrl"),
-                Tuple.Create("CtrlShift", "CtrlShift"),
-                Tuple.Create("Ctrl+Shift", "CtrlShift"),
-                Tuple.Create("ctrl shift", "CtrlShift"),
+                Tuple.Create("CONTROL", "Ctrl"),
+                Tuple.Create("CtrlShift", "Ctrl+Shift"),
+                Tuple.Create("Ctrl+Shift", "Ctrl+Shift"),
+                Tuple.Create("ctrl shift", "Ctrl+Shift"),
+                Tuple.Create("shift+ctrl", "Ctrl+Shift"),
                 Tuple.Create("Alt", "Alt"),
+                Tuple.Create("Ctrl+Alt", "Ctrl+Alt"),
+                Tuple.Create("Shift+Alt", "Shift+Alt"),
+                Tuple.Create("Ctrl+Shift+Alt", "Ctrl+Shift+Alt"),
+                Tuple.Create("None", "None"),
+                Tuple.Create("none", "None"),
                 Tuple.Create("nonsense", "Ctrl"),
+                Tuple.Create("Ctrl+banana", "Ctrl"),
                 Tuple.Create("", "Ctrl"),
                 Tuple.Create((string)null, "Ctrl")
             };
@@ -418,7 +419,7 @@ namespace ABSwitchBack.SelfTest
             bool allOk = true;
             foreach (var testCase in cases)
             {
-                string actual = parse.Invoke(null, new object[] { testCase.Item1 }).ToString();
+                string actual = TriggerGesture.Format(TriggerGesture.Parse(testCase.Item1));
                 if (actual != testCase.Item2)
                 {
                     Console.WriteLine("      '" + (testCase.Item1 ?? "<null>") + "' gave " + actual +
@@ -428,9 +429,34 @@ namespace ABSwitchBack.SelfTest
             }
             Check("trigger parsing handles all " + cases.Length + " cases", allOk);
 
+            // Every combination the settings dialog can produce must survive a save/load.
+            bool roundTrips = true;
+            for (int bits = 0; bits < 8; bits++)
+            {
+                var modifiers = (TriggerModifiers)bits;
+                TriggerModifiers back = TriggerGesture.Parse(TriggerGesture.Format(modifiers));
+                if (back != modifiers)
+                {
+                    Console.WriteLine("      " + modifiers + " round-tripped to " + back);
+                    roundTrips = false;
+                }
+            }
+            Check("all 8 modifier combinations round-trip through config", roundTrips);
+
+            Check("Ctrl+Shift is flagged as reserved by Navisworks",
+                  TriggerGesture.IsReservedByNavisworks(TriggerModifiers.Ctrl | TriggerModifiers.Shift));
+            Check("Ctrl alone is not flagged as reserved",
+                  !TriggerGesture.IsReservedByNavisworks(TriggerModifiers.Ctrl));
+
+            Check("no-modifier gesture is described clearly",
+                  TriggerGesture.Describe(TriggerModifiers.None) == "Left Click (no modifier)");
+            Check("Ctrl gesture is described clearly",
+                  TriggerGesture.Describe(TriggerModifiers.Ctrl) == "Ctrl+Left Click");
+
             // The default must be Ctrl: Ctrl+Shift is reserved by Navisworks.
             var config = new SwitchBackConfig();
             Check("default trigger is Ctrl", config.Trigger == "Ctrl");
+            Check("trigger is enabled by default", config.EnableClickHook);
         }
 
         // ------------------------------------------------------------------ helpers

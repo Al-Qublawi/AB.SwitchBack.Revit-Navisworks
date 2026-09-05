@@ -115,6 +115,30 @@ namespace ABSwitchBack.Revit
         }
     }
 
+    /// <summary>
+    /// Opens the shared settings dialog. Revit reads the config on every switch-back, so
+    /// changes take effect immediately with no restart.
+    /// </summary>
+    [Transaction(TransactionMode.Manual)]
+    public class SettingsCommand : IExternalCommand
+    {
+        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+        {
+            try
+            {
+                IWin32Window owner = new HostWindow(commandData.Application.MainWindowHandle);
+                SettingsForm.Show(owner);
+                return Result.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SettingsCommand failed.", ex);
+                message = ex.Message;
+                return Result.Failed;
+            }
+        }
+    }
+
     /// <summary>Product and author identity, with a link out to LinkedIn.</summary>
     [Transaction(TransactionMode.Manual)]
     public class AboutCommand : IExternalCommand

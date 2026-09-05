@@ -60,6 +60,12 @@
     <None Include="$(RepoRoot)assets\status_16.ico" Link="Images\status_16.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="$(RepoRoot)assets\settings_16.ico" Link="Images\settings_16.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(RepoRoot)assets\settings_32.ico" Link="Images\settings_32.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="$(RepoRoot)assets\status_32.ico" Link="Images\status_32.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -17,6 +17,8 @@ namespace ABSwitchBack.Revit
         public static BitmapSource LogoLarge { get { return LoadPng(Prefix + "logo_32.png"); } }
         public static BitmapSource StatusSmall { get { return LoadPng(Prefix + "status_16.png"); } }
         public static BitmapSource StatusLarge { get { return LoadPng(Prefix + "status_32.png"); } }
+        public static BitmapSource SettingsSmall { get { return LoadPng(Prefix + "settings_16.png"); } }
+        public static BitmapSource SettingsLarge { get { return LoadPng(Prefix + "settings_32.png"); } }
         public static BitmapSource LinkedInSmall { get { return LoadIcon(Prefix + "linkedin_16.ico"); } }
         public static BitmapSource LinkedInLarge { get { return LoadIcon(Prefix + "linkedin_32.ico"); } }
 

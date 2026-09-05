@@ -171,6 +171,17 @@ namespace ABSwitchBack.Revit
                 target.Image = Icons.LogoSmall;
                 panel.AddItem(target);
 
+                var settings = new PushButtonData(
+                    "ABSwitchBackSettings", "Settings",
+                    asm, typeof(SettingsCommand).FullName);
+                settings.ToolTip = "Choose the trigger gesture and what Revit does with the element.";
+                settings.LongDescription =
+                    "The trigger gesture, whether a section box is created, its margin, and whether " +
+                    "Revit may create a 3D view. Settings are shared with Navisworks.";
+                settings.LargeImage = Icons.SettingsLarge;
+                settings.Image = Icons.SettingsSmall;
+                panel.AddItem(settings);
+
                 var status = new PushButtonData(
                     "ABSwitchBackStatus", "Status" + Environment.NewLine + "and Log",
                     asm, typeof(ShowStatusCommand).FullName);

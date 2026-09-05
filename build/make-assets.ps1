@@ -133,9 +133,16 @@ function Write-Ico {
     [System.IO.File]::WriteAllBytes($Path, $stream.ToArray())
 }
 
-# Rounded dark tile with brand-blue rule lines: the "status and log" button.
-function New-StatusGlyph {
-    param([int]$Size)
+# Rounded dark tile in the logo's colours, carrying a simple white glyph. Drawn rather
+# than hand-authored so the ribbon reads as one set with the logo at every size.
+#   status   - three rule lines, reading as a log
+#   settings - three sliders with knobs, legible even at 16 px where a gear turns to mush
+function New-Glyph {
+    param(
+        [int]$Size,
+        [ValidateSet('status', 'settings')]
+        [string]$Kind
+    )
 
     $bitmap = New-Object System.Drawing.Bitmap($Size, $Size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $g = [System.Drawing.Graphics]::FromImage($bitmap)
@@ -165,16 +172,34 @@ function New-StatusGlyph {
         $border.Dispose()
         $path.Dispose()
 
-        # Three rule lines, the last one short, reading as a log.
         $lineBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
         $h = [Math]::Max(1.0, $Size * 0.09)
         $left = $Size * 0.26
         $width = $Size * 0.48
-        for ($i = 0; $i -lt 3; $i++) {
-            $y = $Size * (0.30 + $i * 0.18)
-            $w = if ($i -eq 2) { $width * 0.6 } else { $width }
-            $g.FillRectangle($lineBrush, [single]$left, [single]$y, [single]$w, [single]$h)
+
+        if ($Kind -eq 'status') {
+            # Three rule lines, the last one short, reading as a log.
+            for ($i = 0; $i -lt 3; $i++) {
+                $y = $Size * (0.30 + $i * 0.18)
+                $w = if ($i -eq 2) { $width * 0.6 } else { $width }
+                $g.FillRectangle($lineBrush, [single]$left, [single]$y, [single]$w, [single]$h)
+            }
         }
+        else {
+            # Three sliders, each with a knob at a different position.
+            $knobR = [Math]::Max(1.2, $Size * 0.10)
+            $knobAt = @(0.66, 0.34, 0.54)
+            for ($i = 0; $i -lt 3; $i++) {
+                $y = $Size * (0.30 + $i * 0.18)
+                $g.FillRectangle($lineBrush, [single]$left, [single]$y, [single]$width, [single]$h)
+
+                $cx = $left + ($width * $knobAt[$i])
+                $cy = $y + ($h / 2)
+                $g.FillEllipse($lineBrush, [single]($cx - $knobR), [single]($cy - $knobR),
+                               [single]($knobR * 2), [single]($knobR * 2))
+            }
+        }
+
         $lineBrush.Dispose()
     }
     finally { $g.Dispose() }
@@ -208,20 +233,22 @@ try {
               -Path (Join-Path $assetsDir 'logo.ico')
     Write-Host '  logo.ico (16-256)'
 
-    # A companion "status / log" glyph, drawn to match the logo's dark tile and brand blue
-    # so the ribbon reads as one set rather than a logo next to clip art.
-    $statusSizes = @(16, 32)
-    $statusBitmaps = @{}
-    foreach ($size in $statusSizes) { $statusBitmaps[$size] = New-StatusGlyph -Size $size }
-
-    foreach ($size in $statusSizes) {
-        $statusBitmaps[$size].Save((Join-Path $assetsDir ("status_$size.png")),
-                                   [System.Drawing.Imaging.ImageFormat]::Png)
-        Write-Ico -Bitmaps @($statusBitmaps[$size]) -Path (Join-Path $assetsDir ("status_$size.ico"))
-        Write-Host ("  status_{0}.png / .ico" -f $size)
+    # Companion glyphs, drawn to match the logo's dark tile and brand blue so the ribbon
+    # reads as one set rather than a logo next to clip art.
+    $glyphSizes = @(16, 32)
+    foreach ($kind in @('status', 'settings')) {
+        foreach ($size in $glyphSizes) {
+            $glyph = New-Glyph -Size $size -Kind $kind
+            try {
+                $glyph.Save((Join-Path $assetsDir ("{0}_{1}.png" -f $kind, $size)),
+                            [System.Drawing.Imaging.ImageFormat]::Png)
+                Write-Ico -Bitmaps @($glyph) -Path (Join-Path $assetsDir ("{0}_{1}.ico" -f $kind, $size))
+                Write-Host ("  {0}_{1}.png / .ico" -f $kind, $size)
+            }
+            finally { $glyph.Dispose() }
+        }
     }
 
-    foreach ($size in $statusSizes) { $statusBitmaps[$size].Dispose() }
     foreach ($size in $sizes) { $bitmaps[$size].Dispose() }
 }
 finally { $master.Dispose() }

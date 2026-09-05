@@ -49,6 +49,11 @@ namespace ABSwitchBack.Navisworks
         Icon = "logo_16.ico", LargeIcon = "logo_32.ico",
         LoadForCanExecute = true,
         ToolTip = "Choose which running Revit instance receives the elements you click.")]
+    [Command("ID_ABSB_Settings",
+        DisplayName = "Settings",
+        Icon = "settings_16.ico", LargeIcon = "settings_32.ico",
+        LoadForCanExecute = true,
+        ToolTip = "Choose the trigger gesture, turn it on or off, and set what Revit does.")]
     [Command("ID_ABSB_Status",
         DisplayName = "Status and Log",
         Icon = "status_16.ico", LargeIcon = "status_32.ico",
@@ -77,6 +82,10 @@ namespace ABSwitchBack.Navisworks
                 {
                     case "ID_ABSB_Target":
                         SwitchBackContext.ChooseTargetInteractively();
+                        break;
+
+                    case "ID_ABSB_Settings":
+                        SwitchBackContext.ShowSettings();
                         break;
 
                     case "ID_ABSB_Status":
