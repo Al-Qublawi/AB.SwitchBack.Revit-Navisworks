@@ -32,7 +32,9 @@ ABSwitchBack.Core            net48 + net8.0-windows   shared, Autodesk-free
   Protocol/                  one-line text messages
   Ipc/                       named pipe server + client
   Discovery/                 per-process advert files
-  UI/InstancePickerForm      the destination picker, used by both hosts
+  SelectionDiff              which element a selection change was about
+  TriggerGesture             parses, formats and tests the modifier gesture
+  UI/                        the destination picker and the settings dialog
 
 ABSwitchBack.Revit           built once per Revit release   -p:RevitVersion=2024
   App                        IExternalApplication: ribbon + listener
@@ -41,7 +43,8 @@ ABSwitchBack.Revit           built once per Revit release   -p:RevitVersion=2024
 
 ABSwitchBack.Navisworks      built once per Navisworks release  -p:NavisVersion=2027
   SwitchBackWatcher          EventWatcherPlugin, auto-loads at startup
-  TriggerGesture             reads the modifier keys, once per selection change
+  SwitchBackContext          lifecycle, pipe messaging, sending to Revit
+  SelectionWatcher           turns selection changes into "you clicked this element"
   ElementIdExtractor         finds the Revit id in the item's properties
 ```
 
@@ -184,6 +187,11 @@ picking and navigation cost nothing at all. Bulk changes such as Select All diff
 more than one item and are ignored; above 10 000 selected items the diff is skipped and the
 gesture reports that it cannot identify the element rather than guessing.
 
+The comparison itself is `SelectionDiff.FindSingleChange` in Core — generic, free of any
+Autodesk type, and covered by 13 tests using plain strings. It is the one piece of logic
+where a bug would send the *wrong* element silently, so it is deliberately kept pure and
+testable rather than tangled up with the Navisworks event plumbing in `SelectionWatcher`.
+
 > **No mouse hook.** Version 1.0.0 detected the gesture with a `WH_MOUSE_LL` global mouse
 > hook installed on the Navisworks UI thread. That forced Windows to route *every* mouse
 > event in the system — including the flood of moves during an orbit — through that thread's
@@ -247,7 +255,7 @@ switch-back, so the Revit-side options take effect on the very next click.
 | `SectionBoxMarginMm` | `1000` | Padding around the element, in millimetres |
 | `CreateSectionBox` | `true` | `false` = select and zoom only |
 | `CreateViewIfMissing` | `true` | `false` = never create a 3D view (see *What it changes in your model*) |
-| `EnableClickHook` | `true` | `false` disables the trigger entirely |
+| `TriggerEnabled` | `true` | `false` disables the trigger entirely |
 | `Trigger` | `Ctrl` | Any combination of `Ctrl`, `Shift`, `Alt` (e.g. `Ctrl+Alt`), or `None`. Anything unrecognised falls back to `Ctrl` |
 | `PipeTimeoutMs` | `3000` | Connect/response timeout |
 
@@ -275,11 +283,19 @@ dotnet build tests\ABSwitchBack.SelfTest -c Release
 artifacts\SelfTest\ABSwitchBack.SelfTest.exe
 ```
 
-43 checks over the real compiled assemblies: protocol round-tripping (including payloads
-containing `|`, newlines and backslashes, and 64-bit ids), pipe request/response, four
-simultaneous instances with routing verification, closed-destination timeout, handler
-exceptions, malformed input, 25 concurrent senders, discovery with dead-PID pruning and
-PID-reuse rejection, and element-id text parsing.
+78 checks over the real compiled assemblies. It needs no Autodesk product installed — the
+sections that do (7 and 9) skip themselves when nothing has been built.
+
+| | Covers |
+|---|---|
+| 1 | Protocol round-trip: payloads containing `\|`, newlines and backslashes; 64-bit ids; malformed input rejected |
+| 2–5 | Pipes: request/response, four simultaneous instances with routing verified, closed-destination timeout, handler exceptions, 25 concurrent senders |
+| 6 | Discovery: dead-PID pruning, PID-reuse rejection, advert withdrawal |
+| 7 | Element-id text parsing, including GUID and ambiguous-value rejection |
+| 8 | Trigger parsing, and all eight modifier combinations surviving a save/reload |
+| 9 | The Navisworks plugin loading with no folder probing — guards the 1.1.0 regression |
+| 10 | **Selection diff**: which element a change was about, including every ambiguous case |
+| 11 | Config key matching and the legacy-key migration |
 
 The Autodesk-side behaviour (section box, zoom, ribbon) needs both applications running and
 has to be exercised by hand.
@@ -289,7 +305,7 @@ has to be exercised by hand.
 | Symptom | Cause |
 |---|---|
 | "The click selected the whole model file" | `Trigger=CtrlShift` (Navisworks reserves it), or Selection Resolution is set to File in Options → Interface → Selection |
-| Nothing happens on Ctrl+Click | Check `SwitchBack Status` — the trigger may be off, or `EnableClickHook=false` |
+| Nothing happens on Ctrl+Click | Check `SwitchBack Status` — the trigger may be off, or `TriggerEnabled=false` |
 | "No Revit instance found" | Revit is not running, or the add-in did not load — check the Revit log |
 | "Element not found in the active project" | The Navisworks model came from a different project, or the id belongs to a link |
 | Navisworks plugin missing | It must sit at `Plugins\ABSwitchBack\ABSwitchBack.dll` — the DLL name must match the folder name |

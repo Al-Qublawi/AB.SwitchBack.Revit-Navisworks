@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Autodesk.Navisworks.Api;
-using Autodesk.Navisworks.Api.DocumentParts;
 using ABSwitchBack.Core;
 using ABSwitchBack.Core.Discovery;
 using ABSwitchBack.Core.Interop;
@@ -19,47 +18,38 @@ using NavisApp = Autodesk.Navisworks.Api.Application;
 namespace ABSwitchBack.Navisworks
 {
     /// <summary>
-    /// All Navisworks-side state: the pipe listener, the discovery advert, the trigger
-    /// gesture and the currently paired Revit instance. Created once at startup by
-    /// SwitchBackWatcher.
+    /// Navisworks-side lifecycle and wiring: the pipe listener, the discovery advert, and
+    /// sending the chosen element to Revit.
     ///
-    /// The gesture is detected from the selection events, not from a mouse hook. Ctrl+click
-    /// always toggles the clicked item in or out of the Navisworks selection, so the change
-    /// events always fire, and comparing the selection before and after identifies exactly
-    /// which element was clicked. Nothing runs on the system input path.
+    /// Detecting the gesture belongs to <see cref="SelectionWatcher"/>; this class only
+    /// reacts to what it reports.
     /// </summary>
     internal static class SwitchBackContext
     {
-        /// <summary>
-        /// Above this many selected items the before/after snapshot is skipped. Hashing
-        /// ModelItems crosses into native code, so an unbounded snapshot on a Select All
-        /// would be felt by the user.
-        /// </summary>
-        private const int MaxTrackedSelection = 10000;
-
         private static readonly object Gate = new object();
 
         private static PipeServer _server;
         private static InstanceRegistry _registry;
+        private static SelectionWatcher _watcher;
         private static SynchronizationContext _uiContext;
         private static bool _started;
         private static bool _busy;
 
-        private static TriggerModifiers _trigger = TriggerGesture.Default;
-        private static bool _triggerEnabled;
-
-        // Selection tracking. Navisworks reports only that the selection changed, never
-        // what changed, so the previous set is captured in Changing and diffed in Changed.
-        private static DocumentCurrentSelection _watchedSelection;
-        private static HashSet<ModelItem> _snapshot;
-        private static bool _snapshotSkipped;
-
         public static bool IsRunning { get { return _started; } }
         public static string PipeName { get { return _registry != null ? _registry.Self.PipeName : "(not started)"; } }
-        public static bool TriggerArmed { get { return _triggerEnabled && _watchedSelection != null; } }
+
+        public static bool TriggerArmed
+        {
+            get { return _watcher != null && _watcher.Enabled && _watcher.IsAttached; }
+        }
+
         public static string TriggerDescription
         {
-            get { return _triggerEnabled ? TriggerGesture.Describe(_trigger) : "(trigger disabled)"; }
+            get
+            {
+                if (_watcher == null || !_watcher.Enabled) return "(trigger disabled)";
+                return TriggerGesture.Describe(_watcher.Trigger);
+            }
         }
 
         /// <summary>Called on the Navisworks UI thread at application startup.</summary>
@@ -89,12 +79,13 @@ namespace ABSwitchBack.Navisworks
                 _server = new PipeServer(_registry.Self.PipeName, OnMessageReceived);
                 _server.Start();
 
+                _watcher = new SelectionWatcher(HandleTrigger, WarnSelectionTooLarge);
                 ApplySettings(cfg);
 
                 try { NavisApp.ActiveDocumentChanged += OnActiveDocumentChanged; }
                 catch (Exception ex) { Log.Warn("ActiveDocumentChanged subscription failed: " + ex.Message); }
 
-                SubscribeToSelection();
+                _watcher.AttachToActiveDocument();
             }
             catch (Exception ex)
             {
@@ -108,8 +99,8 @@ namespace ABSwitchBack.Navisworks
             {
                 Log.Info("Stopping SwitchBack.");
                 try { NavisApp.ActiveDocumentChanged -= OnActiveDocumentChanged; } catch { }
-                UnsubscribeFromSelection();
 
+                if (_watcher != null) { _watcher.Dispose(); _watcher = null; }
                 if (_server != null) { _server.Dispose(); _server = null; }
                 if (_registry != null) { _registry.Dispose(); _registry = null; }
             }
@@ -130,27 +121,24 @@ namespace ABSwitchBack.Navisworks
         public static void ApplySettings(SwitchBackConfig cfg)
         {
             if (cfg == null) cfg = SwitchBackConfig.Load();
+            if (_watcher == null) return;
 
-            _triggerEnabled = cfg.EnableClickHook;
-            _trigger = TriggerGesture.Parse(cfg.Trigger);
+            _watcher.Enabled = cfg.TriggerEnabled;
+            _watcher.Trigger = TriggerGesture.Parse(cfg.Trigger);
 
-            // Anything already captured under the previous gesture is now meaningless.
-            _snapshot = null;
-            _snapshotSkipped = false;
-
-            if (!_triggerEnabled)
+            if (!_watcher.Enabled)
             {
                 Log.Info("Trigger disabled by configuration.");
                 return;
             }
 
-            if (TriggerGesture.IsReservedByNavisworks(_trigger))
+            if (TriggerGesture.IsReservedByNavisworks(_watcher.Trigger))
             {
                 Log.Warn("Trigger includes Ctrl+Shift. Navisworks reserves that combination and " +
                          "expands the pick to the whole model file; Ctrl+Click is recommended.");
             }
 
-            Log.Info("Trigger gesture: " + TriggerGesture.Describe(_trigger));
+            Log.Info("Trigger gesture: " + TriggerGesture.Describe(_watcher.Trigger));
         }
 
         /// <summary>Opens the settings dialog and applies the result immediately.</summary>
@@ -167,167 +155,9 @@ namespace ABSwitchBack.Navisworks
             }
         }
 
-        // ------------------------------------------------------------ selection tracking
-
-        private static void SubscribeToSelection()
-        {
-            try
-            {
-                Document doc = NavisApp.ActiveDocument;
-                if (doc == null) return;
-
-                DocumentCurrentSelection selection = doc.CurrentSelection;
-                if (ReferenceEquals(selection, _watchedSelection)) return;
-
-                UnsubscribeFromSelection();
-
-                selection.Changing += OnSelectionChanging;
-                selection.Changed += OnSelectionChanged;
-                _watchedSelection = selection;
-                _snapshot = null;
-                _snapshotSkipped = false;
-
-                Log.Info("Selection tracking active.");
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not subscribe to selection changes: " + ex.Message);
-            }
-        }
-
-        private static void UnsubscribeFromSelection()
-        {
-            try
-            {
-                if (_watchedSelection != null)
-                {
-                    _watchedSelection.Changing -= OnSelectionChanging;
-                    _watchedSelection.Changed -= OnSelectionChanged;
-                }
-            }
-            catch { }
-
-            _watchedSelection = null;
-            _snapshot = null;
-            _snapshotSkipped = false;
-        }
-
-        /// <summary>
-        /// Fires before the selection changes. The snapshot is taken only while the trigger
-        /// modifiers are actually held, so ordinary picking and navigation cost nothing.
-        /// </summary>
-        private static void OnSelectionChanging(object sender, EventArgs e)
-        {
-            _snapshot = null;
-            _snapshotSkipped = false;
-
-            if (!_triggerEnabled) return;
-
-            try
-            {
-                if (!TriggerGesture.AreHeld(_trigger)) return;
-
-                Document doc = NavisApp.ActiveDocument;
-                if (doc == null || doc.IsClear) return;
-
-                ModelItemCollection current = doc.CurrentSelection.SelectedItems;
-                if (current == null) return;
-
-                if (current.Count > MaxTrackedSelection)
-                {
-                    _snapshotSkipped = true;
-                    return;
-                }
-
-                _snapshot = new HashSet<ModelItem>(current);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Selection snapshot failed: " + ex.Message);
-                _snapshot = null;
-            }
-        }
-
-        /// <summary>
-        /// Fires after the selection changed. A one-item difference in either direction
-        /// identifies the clicked element exactly: Ctrl+click ADDS an unselected element and
-        /// REMOVES an already selected one, and both cases mean "this is what you clicked".
-        /// Bulk changes such as Select All differ by far more than one item and are ignored.
-        /// </summary>
-        private static void OnSelectionChanged(object sender, EventArgs e)
-        {
-            HashSet<ModelItem> before = _snapshot;
-            bool skipped = _snapshotSkipped;
-
-            _snapshot = null;
-            _snapshotSkipped = false;
-
-            if (!_triggerEnabled) return;
-
-            try
-            {
-                // The modifiers must still be down: this rules out a change that merely
-                // happened to follow a snapshot.
-                if (!TriggerGesture.AreHeld(_trigger)) return;
-
-                if (skipped)
-                {
-                    PostToUi(() => ShowWarning("Too many elements selected",
-                        "SwitchBack could not work out which element you clicked because more than " +
-                        MaxTrackedSelection.ToString(CultureInfo.InvariantCulture) +
-                        " elements were already selected.\r\n\r\nPress Esc to clear the selection and try again."));
-                    return;
-                }
-
-                if (before == null) return;
-
-                Document doc = NavisApp.ActiveDocument;
-                if (doc == null || doc.IsClear) return;
-
-                ModelItemCollection current = doc.CurrentSelection.SelectedItems;
-                if (current == null || current.Count > MaxTrackedSelection) return;
-
-                var after = new HashSet<ModelItem>(current);
-                ModelItem clicked = FindSingleDifference(before, after);
-                if (clicked == null) return;
-
-                // Run outside the event so the switch back never re-enters Navisworks'
-                // own selection processing.
-                PostToUi(() => HandleTrigger(clicked));
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Selection tracking failed: " + ex.Message);
-            }
-        }
-
-        /// <summary>The one item added, or failing that the one item removed. Null if ambiguous.</summary>
-        private static ModelItem FindSingleDifference(HashSet<ModelItem> before, HashSet<ModelItem> after)
-        {
-            ModelItem added = null;
-            int addedCount = 0;
-            foreach (ModelItem item in after)
-            {
-                if (before.Contains(item)) continue;
-                added = item;
-                if (++addedCount > 1) return null;
-            }
-            if (addedCount == 1) return added;
-
-            ModelItem removed = null;
-            int removedCount = 0;
-            foreach (ModelItem item in before)
-            {
-                if (after.Contains(item)) continue;
-                removed = item;
-                if (++removedCount > 1) return null;
-            }
-            return removedCount == 1 ? removed : null;
-        }
-
         // ------------------------------------------------------------ gesture
 
-        /// <summary>Runs on the UI thread, just after the selection settled.</summary>
+        /// <summary>Runs on the UI thread when the watcher identifies a clicked element.</summary>
         private static void HandleTrigger(ModelItem item)
         {
             // Guard against a second gesture arriving while a picker dialog is open.
@@ -359,11 +189,19 @@ namespace ABSwitchBack.Navisworks
             }
         }
 
+        private static void WarnSelectionTooLarge(int cap)
+        {
+            PostToUi(() => ShowWarning("Too many elements selected",
+                "SwitchBack could not work out which element you clicked because more than " +
+                cap.ToString(CultureInfo.InvariantCulture) +
+                " elements were already selected.\r\n\r\nPress Esc to clear the selection and try again."));
+        }
+
         // ------------------------------------------------------------ plumbing
 
         private static string DetectVersion()
         {
-            string build = PluginBootstrap.BuildVersion;
+            string build = PluginMetadata.BuildVersion;
             if (!string.IsNullOrEmpty(build)) return build;
 
             try
@@ -380,7 +218,7 @@ namespace ABSwitchBack.Navisworks
         private static void OnActiveDocumentChanged(object sender, EventArgs e)
         {
             UpdateDocumentName();
-            SubscribeToSelection();
+            if (_watcher != null) _watcher.AttachToActiveDocument();
         }
 
         private static void UpdateDocumentName()

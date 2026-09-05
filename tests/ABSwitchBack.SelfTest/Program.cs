@@ -62,6 +62,12 @@ namespace ABSwitchBack.SelfTest
             Section("9. Navisworks plugin is self-contained");
             TestPluginIsSelfContained();
 
+            Section("10. Selection diff - which element was clicked");
+            TestSelectionDiff();
+
+            Section("11. Config keys and migration");
+            TestConfigKeys();
+
             Console.WriteLine();
             Console.WriteLine(new string('=', 62));
             Console.WriteLine("  PASSED: " + _passed + "   FAILED: " + _failed);
@@ -459,7 +465,7 @@ namespace ABSwitchBack.SelfTest
             // The default must be Ctrl: Ctrl+Shift is reserved by Navisworks.
             var config = new SwitchBackConfig();
             Check("default trigger is Ctrl", config.Trigger == "Ctrl");
-            Check("trigger is enabled by default", config.EnableClickHook);
+            Check("trigger is enabled by default", config.TriggerEnabled);
         }
 
         /// <summary>
@@ -550,6 +556,107 @@ namespace ABSwitchBack.SelfTest
             {
                 AppDomain.CurrentDomain.AssemblyResolve -= apiOnly;
                 try { Directory.Delete(isolated, true); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// The logic that decides WHICH element gets sent to Revit. Getting this wrong sends
+        /// the wrong element silently, which is worse than a crash, so it is worth covering
+        /// properly. Plain strings stand in for ModelItems - the algorithm is generic for
+        /// exactly this reason.
+        /// </summary>
+        private static void TestSelectionDiff()
+        {
+            // Ctrl+click on an unselected element: it is added.
+            Check("one item added is the clicked item",
+                  SelectionDiff.FindSingleChange(Set(), Set("wall")) == "wall");
+            Check("added to an existing selection",
+                  SelectionDiff.FindSingleChange(Set("a", "b"), Set("a", "b", "duct")) == "duct");
+
+            // Ctrl+click on an already selected element: it is removed. That still tells us
+            // exactly what was clicked, so it must be reported, not ignored.
+            Check("one item removed is the clicked item",
+                  SelectionDiff.FindSingleChange(Set("a", "b"), Set("a")) == "b");
+            Check("selection emptied by removing the only item",
+                  SelectionDiff.FindSingleChange(Set("pipe"), Set()) == "pipe");
+
+            // A plain click replaces the selection: one out, one in. The addition wins,
+            // because that is the element under the cursor.
+            Check("replacement reports the newly added item",
+                  SelectionDiff.FindSingleChange(Set("old"), Set("new")) == "new");
+
+            // Anything ambiguous must be declined rather than guessed.
+            Check("no change reports nothing",
+                  SelectionDiff.FindSingleChange(Set("a", "b"), Set("a", "b")) == null);
+            Check("two items added is ambiguous",
+                  SelectionDiff.FindSingleChange(Set("a"), Set("a", "b", "c")) == null);
+            Check("two items removed is ambiguous",
+                  SelectionDiff.FindSingleChange(Set("a", "b", "c"), Set("a")) == null);
+            Check("select all is ambiguous",
+                  SelectionDiff.FindSingleChange(Set(), Set("a", "b", "c", "d")) == null);
+            Check("clearing a large selection is ambiguous",
+                  SelectionDiff.FindSingleChange(Set("a", "b", "c"), Set()) == null);
+            Check("both sets empty reports nothing",
+                  SelectionDiff.FindSingleChange(Set(), Set()) == null);
+
+            // Nulls can reach this if a snapshot was skipped; it must not throw.
+            Check("null before is handled", SelectionDiff.FindSingleChange<string>(null, Set("a")) == null);
+            Check("null after is handled", SelectionDiff.FindSingleChange(Set("a"), null) == null);
+        }
+
+        private static HashSet<string> Set(params string[] items)
+        {
+            return new HashSet<string>(items);
+        }
+
+        private static void TestConfigKeys()
+        {
+            // A substring test would be wrong here: "Trigger" is a prefix of "TriggerEnabled".
+            string[] lines = { "# comment", "TriggerEnabled=true", "PipeTimeoutMs=3000" };
+            Check("key match is exact, not a substring", !SwitchBackConfig.HasKey(lines, "Trigger"));
+            Check("present key is found", SwitchBackConfig.HasKey(lines, "TriggerEnabled"));
+            Check("commented-out key does not count",
+                  !SwitchBackConfig.HasKey(new[] { "#Trigger=Ctrl" }, "Trigger"));
+            Check("key match ignores case", SwitchBackConfig.HasKey(lines, "pipetimeoutms"));
+
+            // The setting written as EnableClickHook by 1.0.x must survive the rename,
+            // otherwise upgrading silently re-arms a trigger someone deliberately turned off.
+            string configPath = Paths.ConfigFile;
+            string backup = configPath + ".selftest-backup";
+            bool hadConfig = File.Exists(configPath);
+
+            try
+            {
+                if (hadConfig) File.Copy(configPath, backup, true);
+
+                Paths.EnsureCreated();
+                File.WriteAllText(configPath,
+                    "EnableClickHook=false\r\nTrigger=Alt\r\nClickDelayMs=150\r\nNavisTargetPid=1234\r\n");
+
+                SwitchBackConfig migrated = SwitchBackConfig.Load();
+                Check("legacy EnableClickHook=false carries over to TriggerEnabled",
+                      !migrated.TriggerEnabled);
+                Check("other settings are untouched by the migration", migrated.Trigger == "Alt");
+
+                migrated.Save();
+                string[] saved = File.ReadAllLines(configPath);
+                Check("saved file uses the new key", SwitchBackConfig.HasKey(saved, "TriggerEnabled"));
+                Check("saved file drops the legacy key", !SwitchBackConfig.HasKey(saved, "EnableClickHook"));
+
+                // Dead settings must not survive a save, or they linger forever inviting
+                // someone to tune a value nothing reads.
+                Check("obsolete ClickDelayMs is dropped", !SwitchBackConfig.HasKey(saved, "ClickDelayMs"));
+                Check("obsolete NavisTargetPid is dropped", !SwitchBackConfig.HasKey(saved, "NavisTargetPid"));
+            }
+            finally
+            {
+                try
+                {
+                    if (hadConfig) File.Copy(backup, configPath, true);
+                    else File.Delete(configPath);
+                    if (File.Exists(backup)) File.Delete(backup);
+                }
+                catch { }
             }
         }
 

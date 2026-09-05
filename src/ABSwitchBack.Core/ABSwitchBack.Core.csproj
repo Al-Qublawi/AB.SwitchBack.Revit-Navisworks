@@ -6,4 +6,12 @@
     <RootNamespace>ABSwitchBack.Core</RootNamespace>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
+
+  <!--
+    Lets the self-test reach implementation details worth covering directly, without
+    widening the public API just to make them testable.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="ABSwitchBack.SelfTest" />
+  </ItemGroup>
 </Project>

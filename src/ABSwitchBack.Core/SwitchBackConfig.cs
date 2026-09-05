@@ -30,7 +30,7 @@ namespace ABSwitchBack.Core
         public bool CreateViewIfMissing { get { return GetBool("CreateViewIfMissing", true); } set { Set("CreateViewIfMissing", value); } }
 
         /// <summary>Master switch for the trigger gesture in Navisworks.</summary>
-        public bool EnableClickHook { get { return GetBool("EnableClickHook", true); } set { Set("EnableClickHook", value); } }
+        public bool TriggerEnabled { get { return GetBool("TriggerEnabled", true); } set { Set("TriggerEnabled", value); } }
 
         /// <summary>
         /// Modifiers that trigger a switch back: any combination of Ctrl, Shift and Alt
@@ -63,7 +63,57 @@ namespace ABSwitchBack.Core
                 }
             }
             catch (Exception ex) { Log.Error("Config load failed, using defaults.", ex); }
+
+            cfg.MigrateLegacyKeys();
             return cfg;
+        }
+
+        /// <summary>
+        /// Carries settings written by an older version over to their current names, so an
+        /// upgrade never silently resets someone's choice. The old key is dropped, so the
+        /// next Save writes a clean file.
+        /// </summary>
+        private void MigrateLegacyKeys()
+        {
+            // "EnableClickHook" dates from the mouse hook removed in 1.0.1. There has been
+            // no hook since; the setting simply arms the trigger gesture.
+            Rename("EnableClickHook", "TriggerEnabled");
+
+            // Settings that no longer do anything. Save() rewrites whatever it loaded, so
+            // without this they would linger in every config file indefinitely and invite
+            // someone to tune a value that is read by nothing.
+            _values.Remove("ClickDelayMs");    // the mouse hook's settle delay, gone in 1.0.1
+            _values.Remove("NavisTargetPid");  // written by Revit, never read by anything
+        }
+
+        /// <summary>
+        /// True when a line actually assigns this key. A substring search would be wrong:
+        /// "Trigger" is a prefix of "TriggerEnabled", so it would report the wrong answer.
+        /// </summary>
+        internal static bool HasKey(string[] lines, string key)
+        {
+            if (lines == null) return false;
+
+            foreach (string raw in lines)
+            {
+                if (raw == null) continue;
+                string line = raw.Trim();
+                if (line.Length == 0 || line[0] == '#' || line[0] == ';') continue;
+
+                int eq = line.IndexOf('=');
+                if (eq <= 0) continue;
+                if (line.Substring(0, eq).Trim().Equals(key, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        private void Rename(string oldKey, string newKey)
+        {
+            string value;
+            if (!_values.TryGetValue(oldKey, out value)) return;
+
+            _values.Remove(oldKey);
+            if (!_values.ContainsKey(newKey)) _values[newKey] = value;
         }
 
         public void Save()
@@ -100,7 +150,7 @@ namespace ABSwitchBack.Core
                 sb.AppendLine("# Set this AND CreateSectionBox to false to make the add-in strictly read-only.");
                 sb.AppendLine("CreateViewIfMissing=true");
                 sb.AppendLine("# Set to false to disable the trigger gesture in Navisworks.");
-                sb.AppendLine("EnableClickHook=true");
+                sb.AppendLine("TriggerEnabled=true");
                 sb.AppendLine("# Trigger gesture: any combination of Ctrl, Shift and Alt plus a left click,");
                 sb.AppendLine("# e.g. Ctrl+Alt. Use None to send every element you select.");
                 sb.AppendLine("# Ctrl+Shift is intercepted by Navisworks and selects the whole file - avoid it.");
@@ -120,10 +170,10 @@ namespace ABSwitchBack.Core
         {
             try
             {
-                string existing = File.ReadAllText(Paths.ConfigFile);
+                string[] lines = File.ReadAllLines(Paths.ConfigFile);
                 var additions = new StringBuilder();
 
-                if (existing.IndexOf("Trigger", StringComparison.OrdinalIgnoreCase) < 0)
+                if (!HasKey(lines, "Trigger"))
                 {
                     additions.AppendLine();
                     additions.AppendLine("# Trigger gesture: Ctrl, CtrlShift or Alt (plus left click).");
@@ -131,7 +181,7 @@ namespace ABSwitchBack.Core
                     additions.AppendLine("Trigger=Ctrl");
                 }
 
-                if (existing.IndexOf("CreateViewIfMissing", StringComparison.OrdinalIgnoreCase) < 0)
+                if (!HasKey(lines, "CreateViewIfMissing"))
                 {
                     additions.AppendLine();
                     additions.AppendLine("# Allow Revit to create a 3D view if the project has none that is usable.");

@@ -193,7 +193,7 @@ namespace ABSwitchBack.Core.UI
             _loading = true;
             try
             {
-                _enabled.Checked = config.EnableClickHook;
+                _enabled.Checked = config.TriggerEnabled;
 
                 TriggerModifiers modifiers = TriggerGesture.Parse(config.Trigger);
                 _ctrl.Checked = (modifiers & TriggerModifiers.Ctrl) != 0;
@@ -279,7 +279,7 @@ namespace ABSwitchBack.Core.UI
 
         private void Save()
         {
-            _config.EnableClickHook = _enabled.Checked;
+            _config.TriggerEnabled = _enabled.Checked;
             _config.Trigger = TriggerGesture.Format(SelectedModifiers);
             _config.CreateSectionBox = _sectionBox.Checked;
             _config.SectionBoxMarginMm = (double)_margin.Value;
@@ -287,7 +287,7 @@ namespace ABSwitchBack.Core.UI
             _config.Save();
 
             Log.Info("Settings saved. Trigger=" + _config.Trigger +
-                     " Enabled=" + _config.EnableClickHook +
+                     " Enabled=" + _config.TriggerEnabled +
                      " SectionBox=" + _config.CreateSectionBox +
                      " MarginMm=" + _config.SectionBoxMarginMm.ToString("0", CultureInfo.InvariantCulture) +
                      " CreateView=" + _config.CreateViewIfMissing);
