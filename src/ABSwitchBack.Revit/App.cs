@@ -160,24 +160,17 @@ namespace ABSwitchBack.Revit
                 RibbonPanel panel = application.CreateRibbonPanel(TabName, PanelName);
                 string asm = Assembly.GetExecutingAssembly().Location;
 
-                var target = new PushButtonData(
-                    "ABSwitchBackTarget", "Navisworks" + Environment.NewLine + "Target",
-                    asm, typeof(SelectNavisworksTargetCommand).FullName);
-                target.ToolTip = "Choose which running Navisworks instance this Revit session pairs with.";
-                target.LongDescription =
-                    "Lists every running Navisworks that has SwitchBack loaded, with its version, " +
-                    "open document and process id. Use Test to confirm the connection.";
-                target.LargeImage = Icons.LogoLarge;
-                target.Image = Icons.LogoSmall;
-                panel.AddItem(target);
-
-                // No Settings button here by design: Revit only receives. Everything
-                // configurable - the trigger gesture and what Revit does with the element -
-                // is set from the Navisworks ribbon, which is where the workflow starts.
+                // Revit only receives, so its ribbon is deliberately one diagnostic button.
+                // The trigger gesture and everything else configurable is set from the
+                // Navisworks ribbon, which is where the workflow starts.
                 var status = new PushButtonData(
                     "ABSwitchBackStatus", "Status" + Environment.NewLine + "and Log",
                     asm, typeof(ShowStatusCommand).FullName);
-                status.ToolTip = "Show the SwitchBack listener status and open the log folder.";
+                status.ToolTip = "Listener status, the settings in force, running Navisworks instances, and the log folder.";
+                status.LongDescription =
+                    "Confirms this Revit session is listening, shows what will happen when an " +
+                    "element arrives, and lists every running Navisworks that has SwitchBack " +
+                    "loaded so the connection can be tested.";
                 status.LargeImage = Icons.StatusLarge;
                 status.Image = Icons.StatusSmall;
                 panel.AddItem(status);

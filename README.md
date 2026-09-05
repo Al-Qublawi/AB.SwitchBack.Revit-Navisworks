@@ -10,7 +10,7 @@ comes to the foreground.
 > expands the pick to the whole model file, so the plugin only ever sees the file node and
 > can never find an element id. Ctrl+Click is Navisworks' normal "add to selection", which
 > resolves to a single element at your configured Selection Resolution. The gesture is
-> fully configurable from the ribbon **Settings** button if you want something else.
+> fully configurable from the **Settings** button on the Navisworks ribbon.
 
 ---
 
@@ -100,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -RevitYears 2024 -Navis
 powershell -ExecutionPolicy Bypass -File build\make-msi.ps1
 ```
 
-Produces `dist\ABSwitchBack-1.1.1.msi` — one per-machine package covering every release that
+Produces `dist\ABSwitchBack-1.1.0.msi` — one per-machine package covering every release that
 was compiled into `artifacts\`. Requires the WiX 5 CLI once:
 `dotnet tool install --global wix`.
 
@@ -161,13 +161,15 @@ Uninstall with `build\uninstall.ps1` (add `-PurgeSettings` to also drop logs and
 Revit selects the element, applies a section box with a 1 m margin, zooms to it and comes
 forward.
 
-Both applications get an **AB SwitchBack** ribbon tab, with **About** and **LinkedIn**:
+Both applications get an **AB SwitchBack** ribbon tab, with **About** and **LinkedIn**.
 
-| | Navisworks | Revit |
+Navisworks drives; Revit only receives, so its tab is one diagnostic button:
+
+| Button | Navisworks | Revit |
 |---|---|---|
-| **Revit Target** / **Navisworks** | choose the destination Revit | lists running Navisworks instances, with a Test button |
-| **Settings** | trigger gesture, on/off, section box options | — Revit only receives |
-| **Status and Log** | listener and trigger state, log folder | listener state, settings in force, log folder |
+| **Revit Target** | choose the destination Revit | — |
+| **Settings** | trigger gesture, on/off, section box options | — |
+| **Status and Log** | listener and trigger state, log folder | listener state, the settings in force, running Navisworks instances with a connection **Test**, log folder |
 
 ### How the clicked element is identified
 

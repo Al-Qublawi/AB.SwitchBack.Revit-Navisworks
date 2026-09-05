@@ -27,47 +27,12 @@ namespace ABSwitchBack.Revit
         public IntPtr Handle { get { return _handle; } }
     }
 
-    /// <summary>Lists running Navisworks instances and remembers the chosen one.</summary>
-    [Transaction(TransactionMode.Manual)]
-    public class SelectNavisworksTargetCommand : IExternalCommand
-    {
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
-        {
-            try
-            {
-                SwitchBackConfig cfg = SwitchBackConfig.Load();
-                IWin32Window owner = new HostWindow(commandData.Application.MainWindowHandle);
-
-                InstanceInfo chosen = InstancePickerForm.Show(
-                    owner,
-                    PipeNames.RoleNavisworks,
-                    "SwitchBack - choose a Navisworks instance",
-                    cfg.PipeTimeoutMs);
-
-                if (chosen == null) return Result.Cancelled;
-
-                cfg.NavisTargetPid = chosen.Pid;
-                cfg.Save();
-                Log.Info("Revit paired with Navisworks PID " + chosen.Pid);
-
-                var dialog = new TaskDialog("AB SwitchBack");
-                dialog.MainInstruction = "Paired with Navisworks.";
-                dialog.MainContent = chosen.DisplayName + Environment.NewLine + Environment.NewLine +
-                                     "In Navisworks, hold Ctrl+Shift and left-click an element to bring it up here.";
-                dialog.Show();
-
-                return Result.Succeeded;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("SelectNavisworksTargetCommand failed.", ex);
-                message = ex.Message;
-                return Result.Failed;
-            }
-        }
-    }
-
-    /// <summary>Shows listener status and offers to open the log folder.</summary>
+    /// <summary>
+    /// The single diagnostic entry point on the Revit ribbon: listener state, the settings
+    /// currently in force, the running Navisworks instances, and the log folder.
+    ///
+    /// Revit only ever receives, so there is deliberately nothing to configure or pair here.
+    /// </summary>
     [Transaction(TransactionMode.Manual)]
     public class ShowStatusCommand : IExternalCommand
     {
@@ -102,10 +67,26 @@ namespace ABSwitchBack.Revit
                 dialog.MainInstruction = "SwitchBack status";
                 dialog.MainContent = body;
                 dialog.CommonButtons = TaskDialogCommonButtons.Close;
-                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Open the log and settings folder");
+                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1,
+                    "Show running Navisworks instances",
+                    "Check that Revit and Navisworks can see each other, and test the connection.");
+                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Open the log and settings folder");
 
                 TaskDialogResult result = dialog.Show();
-                if (result == TaskDialogResult.CommandLink1) Branding.OpenDataFolder();
+
+                if (result == TaskDialogResult.CommandLink1)
+                {
+                    // Read-only: Revit never sends, so there is no destination to choose.
+                    InstancePickerForm.ShowReadOnly(
+                        new HostWindow(commandData.Application.MainWindowHandle),
+                        PipeNames.RoleNavisworks,
+                        "SwitchBack - running Navisworks instances",
+                        cfg.PipeTimeoutMs);
+                }
+                else if (result == TaskDialogResult.CommandLink2)
+                {
+                    Branding.OpenDataFolder();
+                }
 
                 return Result.Succeeded;
             }

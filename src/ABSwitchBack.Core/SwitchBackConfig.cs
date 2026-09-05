@@ -29,16 +29,14 @@ namespace ABSwitchBack.Core
         /// </summary>
         public bool CreateViewIfMissing { get { return GetBool("CreateViewIfMissing", true); } set { Set("CreateViewIfMissing", value); } }
 
-        /// <summary>Delay after the click before reading Navisworks' selection, in milliseconds.</summary>
-        public int ClickDelayMs { get { return Clamp(GetInt("ClickDelayMs", 150), 30, 2000); } set { Set("ClickDelayMs", value); } }
-
-        /// <summary>Master switch for the click hook in Navisworks.</summary>
+        /// <summary>Master switch for the trigger gesture in Navisworks.</summary>
         public bool EnableClickHook { get { return GetBool("EnableClickHook", true); } set { Set("EnableClickHook", value); } }
 
         /// <summary>
-        /// Modifier that triggers a switch back: Ctrl (default), CtrlShift or Alt.
+        /// Modifiers that trigger a switch back: any combination of Ctrl, Shift and Alt
+        /// (e.g. "Ctrl+Alt"), or "None" to send every element you select.
         /// Ctrl+Shift is intercepted by Navisworks itself and expands the pick to the whole
-        /// model file, so it is not recommended.
+        /// model file, so it is not recommended. See <see cref="TriggerGesture"/>.
         /// </summary>
         public string Trigger { get { return GetString("Trigger", "Ctrl"); } set { Set("Trigger", value); } }
 
@@ -48,8 +46,6 @@ namespace ABSwitchBack.Core
         /// <summary>Last Revit process chosen as a target from Navisworks (a hint; re-prompted if dead).</summary>
         public int RevitTargetPid { get { return GetInt("RevitTargetPid", 0); } set { Set("RevitTargetPid", value); } }
 
-        /// <summary>Last Navisworks process chosen as a target from Revit.</summary>
-        public int NavisTargetPid { get { return GetInt("NavisTargetPid", 0); } set { Set("NavisTargetPid", value); } }
 
         public static SwitchBackConfig Load()
         {
@@ -103,11 +99,10 @@ namespace ABSwitchBack.Core
                 sb.AppendLine("# Allow Revit to create a 3D view if the project has none that is usable.");
                 sb.AppendLine("# Set this AND CreateSectionBox to false to make the add-in strictly read-only.");
                 sb.AppendLine("CreateViewIfMissing=true");
-                sb.AppendLine("# Delay after the click before reading the Navisworks selection.");
-                sb.AppendLine("ClickDelayMs=150");
-                sb.AppendLine("# Set to false to disable the click hook in Navisworks.");
+                sb.AppendLine("# Set to false to disable the trigger gesture in Navisworks.");
                 sb.AppendLine("EnableClickHook=true");
-                sb.AppendLine("# Trigger gesture: Ctrl, CtrlShift or Alt (plus left click).");
+                sb.AppendLine("# Trigger gesture: any combination of Ctrl, Shift and Alt plus a left click,");
+                sb.AppendLine("# e.g. Ctrl+Alt. Use None to send every element you select.");
                 sb.AppendLine("# Ctrl+Shift is intercepted by Navisworks and selects the whole file - avoid it.");
                 sb.AppendLine("Trigger=Ctrl");
                 sb.AppendLine("# Named pipe connect/response timeout.");

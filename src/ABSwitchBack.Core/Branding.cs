@@ -10,7 +10,7 @@ namespace ABSwitchBack.Core
         public const string LinkedInUrl = "https://www.linkedin.com/in/abdullahalqublawi/";
         public const string LinkedInCaption = "Abdullah Lotfy - LinkedIn";
         public const string ProductName = "AB SwitchBack";
-        public const string Version = "1.1.1";
+        public const string Version = "1.1.0";
         public const string Tagline = "Navisworks to Revit switch back";
 
         public static string AboutLine

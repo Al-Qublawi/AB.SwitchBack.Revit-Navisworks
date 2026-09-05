@@ -16,6 +16,7 @@ namespace ABSwitchBack.Core.UI
     {
         private readonly string _role;
         private readonly int _timeoutMs;
+        private readonly bool _allowSelect;
         private readonly ListView _list;
         private readonly Button _ok;
         private readonly Button _test;
@@ -23,10 +24,16 @@ namespace ABSwitchBack.Core.UI
 
         public InstanceInfo Selected { get; private set; }
 
-        public InstancePickerForm(string role, string title, int currentPid, int timeoutMs)
+        /// <param name="allowSelect">
+        /// True in Navisworks, which genuinely chooses a destination. False in Revit, where
+        /// this is only a connection check: Revit never sends anything, so offering to
+        /// "select" a Navisworks would store a preference nothing acts on.
+        /// </param>
+        public InstancePickerForm(string role, string title, int timeoutMs, bool allowSelect)
         {
             _role = role;
             _timeoutMs = timeoutMs;
+            _allowSelect = allowSelect;
 
             Text = title;
             StartPosition = FormStartPosition.CenterScreen;
@@ -71,8 +78,14 @@ namespace ABSwitchBack.Core.UI
                 Padding = new Padding(6)
             };
 
-            var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Width = 90, Height = 28 };
-            _ok = new Button { Text = "Select", Width = 90, Height = 28, Enabled = false };
+            var cancel = new Button
+            {
+                Text = _allowSelect ? "Cancel" : "Close",
+                DialogResult = DialogResult.Cancel,
+                Width = 90,
+                Height = 28
+            };
+            _ok = new Button { Text = "Select", Width = 90, Height = 28, Enabled = false, Visible = _allowSelect };
             _ok.Click += (s, e) => AcceptSelection();
             _test = new Button { Text = "Test", Width = 90, Height = 28, Enabled = false };
             _test.Click += (s, e) => TestSelection();
@@ -80,7 +93,7 @@ namespace ABSwitchBack.Core.UI
             refresh.Click += (s, e) => Reload();
 
             buttons.Controls.Add(cancel);
-            buttons.Controls.Add(_ok);
+            if (_allowSelect) buttons.Controls.Add(_ok);
             buttons.Controls.Add(_test);
             buttons.Controls.Add(refresh);
 
@@ -88,7 +101,8 @@ namespace ABSwitchBack.Core.UI
             Controls.Add(_status);
             Controls.Add(buttons);
 
-            AcceptButton = _ok;
+            // Without selection there is nothing to accept, so Enter should test instead.
+            AcceptButton = _allowSelect ? _ok : _test;
             CancelButton = cancel;
 
             Reload();
@@ -135,7 +149,7 @@ namespace ABSwitchBack.Core.UI
         private void UpdateButtons()
         {
             bool has = _list.SelectedItems.Count > 0;
-            _ok.Enabled = has;
+            _ok.Enabled = has && _allowSelect;
             _test.Enabled = has;
         }
 
@@ -170,6 +184,8 @@ namespace ABSwitchBack.Core.UI
 
         private void AcceptSelection()
         {
+            if (!_allowSelect) { TestSelection(); return; }
+
             InstanceInfo info = Current;
             if (info == null) return;
             Selected = info;
@@ -177,13 +193,22 @@ namespace ABSwitchBack.Core.UI
             Close();
         }
 
-        /// <summary>Convenience wrapper; returns null when the user cancels.</summary>
+        /// <summary>Picks a destination; returns null when the user cancels.</summary>
         public static InstanceInfo Show(IWin32Window owner, string role, string title, int timeoutMs)
         {
-            using (var form = new InstancePickerForm(role, title, 0, timeoutMs))
+            using (var form = new InstancePickerForm(role, title, timeoutMs, true))
             {
                 DialogResult r = owner != null ? form.ShowDialog(owner) : form.ShowDialog();
                 return r == DialogResult.OK ? form.Selected : null;
+            }
+        }
+
+        /// <summary>Read-only view of the running instances, with a connection Test button.</summary>
+        public static void ShowReadOnly(IWin32Window owner, string role, string title, int timeoutMs)
+        {
+            using (var form = new InstancePickerForm(role, title, timeoutMs, false))
+            {
+                if (owner != null) form.ShowDialog(owner); else form.ShowDialog();
             }
         }
     }
