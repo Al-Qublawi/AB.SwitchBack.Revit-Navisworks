@@ -24,7 +24,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$ProductVersion = '1.1.0',
+    [string]$ProductVersion = '1.1.1',
     [switch]$KeepSource
 )
 

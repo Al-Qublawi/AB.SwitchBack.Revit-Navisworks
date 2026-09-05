@@ -15,12 +15,6 @@ namespace ABSwitchBack.Navisworks
         ToolTip = "Sends the clicked element to Revit")]
     public class SwitchBackWatcher : EventWatcherPlugin
     {
-        static SwitchBackWatcher()
-        {
-            // Must run before any Core type is resolved.
-            PluginBootstrap.EnsureAssemblyResolver();
-        }
-
         public override void OnLoaded()
         {
             SwitchBackContext.Start();
@@ -69,11 +63,6 @@ namespace ABSwitchBack.Navisworks
         ToolTip = "Open the author's LinkedIn profile.")]
     public sealed class SwitchBackRibbonPlugin : CommandHandlerPlugin
     {
-        static SwitchBackRibbonPlugin()
-        {
-            PluginBootstrap.EnsureAssemblyResolver();
-        }
-
         public override int ExecuteCommand(string commandId, params string[] parameters)
         {
             try
@@ -110,8 +99,6 @@ namespace ABSwitchBack.Navisworks
             return 0;
         }
 
-        // Core types are touched only inside method bodies, so the assembly resolver
-        // registered by the static constructor is always in place first.
         private static void ShowStatus()
         {
             int revitCount = ABSwitchBack.Core.Discovery.InstanceRegistry

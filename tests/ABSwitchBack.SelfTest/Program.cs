@@ -59,6 +59,9 @@ namespace ABSwitchBack.SelfTest
             Section("8. Trigger gesture configuration");
             TestTriggerParsing();
 
+            Section("9. Navisworks plugin is self-contained");
+            TestPluginIsSelfContained();
+
             Console.WriteLine();
             Console.WriteLine(new string('=', 62));
             Console.WriteLine("  PASSED: " + _passed + "   FAILED: " + _failed);
@@ -457,6 +460,97 @@ namespace ABSwitchBack.SelfTest
             var config = new SwitchBackConfig();
             Check("default trigger is Ctrl", config.Trigger == "Ctrl");
             Check("trigger is enabled by default", config.EnableClickHook);
+        }
+
+        /// <summary>
+        /// Guards the regression that broke 1.1.0 completely.
+        ///
+        /// Navisworks scans a plugin assembly for [Plugin] types before any of our code has
+        /// run, so an AssemblyResolve handler registered from a static constructor is always
+        /// too late. If a scanned type needs another of our assemblies at that moment - which
+        /// a value-type field such as an enum forces, because the CLR must compute the type's
+        /// layout - the scan throws and Navisworks silently loads NO plugins: no ribbon, no
+        /// listener, nothing.
+        ///
+        /// The DLL is copied somewhere empty and loaded with LoadFile, which does not probe
+        /// the file's own folder. That is the strictest case, and it must still work.
+        /// </summary>
+        private static void TestPluginIsSelfContained()
+        {
+            string repoRoot = FindRepoRoot();
+            string navisArtifacts = repoRoot == null ? null : Path.Combine(repoRoot, "artifacts", "Navisworks");
+            if (navisArtifacts == null || !Directory.Exists(navisArtifacts))
+            {
+                Console.WriteLine("      SKIPPED - the Navisworks plugin has not been built.");
+                return;
+            }
+
+            string built = Directory
+                .GetFiles(navisArtifacts, "ABSwitchBack.dll", SearchOption.AllDirectories)
+                .FirstOrDefault();
+            if (built == null)
+            {
+                Console.WriteLine("      SKIPPED - the Navisworks plugin has not been built.");
+                return;
+            }
+
+            // Nothing but the Navisworks API may be resolvable, exactly as during a scan.
+            string navisDir = FindNavisworksDir();
+            ResolveEventHandler apiOnly = (s, e) =>
+            {
+                string simple = new AssemblyName(e.Name).Name;
+                if (string.IsNullOrEmpty(navisDir)) return null;
+                string candidate = Path.Combine(navisDir, simple + ".dll");
+                return File.Exists(candidate) ? Assembly.LoadFrom(candidate) : null;
+            };
+            AppDomain.CurrentDomain.AssemblyResolve += apiOnly;
+
+            string isolated = Path.Combine(Path.GetTempPath(),
+                "ABSwitchBackIsolated_" + Guid.NewGuid().ToString("N"));
+
+            try
+            {
+                Directory.CreateDirectory(isolated);
+                string copy = Path.Combine(isolated, "ABSwitchBack.dll");
+                File.Copy(built, copy, true);
+
+                Check("plugin ships as a single DLL (no sibling assemblies required)",
+                      Directory.GetFiles(Path.GetDirectoryName(built), "*.dll").Length == 1);
+
+                Assembly assembly = Assembly.LoadFile(copy);
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    Check("plugin types enumerate with no folder probing", false);
+                    foreach (Exception loader in ex.LoaderExceptions.Take(2))
+                        Console.WriteLine("      " + loader.Message);
+                    return;
+                }
+
+                Check("plugin types enumerate with no folder probing", true);
+
+                var plugins = types
+                    .Where(t => t.GetCustomAttributesData()
+                                 .Any(a => a.AttributeType.Name == "PluginAttribute"))
+                    .Select(t => t.Name)
+                    .ToList();
+
+                Check("the auto-start watcher is discoverable", plugins.Contains("SwitchBackWatcher"));
+                Check("the ribbon plugin is discoverable", plugins.Contains("SwitchBackRibbonPlugin"));
+            }
+            catch (Exception ex)
+            {
+                Check("plugin loads in isolation (" + ex.GetType().Name + ": " + ex.Message + ")", false);
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.AssemblyResolve -= apiOnly;
+                try { Directory.Delete(isolated, true); } catch { }
+            }
         }
 
         // ------------------------------------------------------------------ helpers

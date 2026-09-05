@@ -33,8 +33,25 @@
     </Reference>
   </ItemGroup>
 
+  <!--
+    Core is COMPILED IN rather than referenced as a second assembly.
+
+    Navisworks scans a plugin assembly for [Plugin] types before any of our code has run,
+    so there is no opportunity to install an AssemblyResolve handler first. If any scanned
+    type needs Core to be resolved at that moment - which a value-type field such as the
+    TriggerModifiers enum forces, because the CLR must compute the type's layout - the scan
+    throws ReflectionTypeLoadException and Navisworks silently loads NO plugins at all: no
+    ribbon, no listener, nothing. That is exactly what happened in 1.1.0.
+
+    Shipping one self-contained DLL removes the failure mode completely, whatever load
+    context Navisworks uses. Core remains a single shared source tree; only the Navisworks
+    build links it in. Revit keeps the project reference, because Revit probes the add-in
+    folder for dependencies and has never had this problem.
+  -->
   <ItemGroup>
-    <ProjectReference Include="..\ABSwitchBack.Core\ABSwitchBack.Core.csproj" />
+    <Compile Include="$(RepoRoot)src\ABSwitchBack.Core\**\*.cs"
+             Exclude="$(RepoRoot)src\ABSwitchBack.Core\obj\**\*.cs;$(RepoRoot)src\ABSwitchBack.Core\bin\**\*.cs"
+             LinkBase="Core" />
   </ItemGroup>
 
   <!-- Lets the running plugin report which release it was compiled against. -->

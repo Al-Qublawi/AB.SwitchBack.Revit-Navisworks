@@ -140,6 +140,10 @@ if (-not $RevitOnly) {
         $destination = Join-Path $install.Path 'Plugins\ABSwitchBack'
 
         try {
+            # Wipe first: the plugin used to ship a separate ABSwitchBack.Core.dll, and a
+            # leftover copy beside the new self-contained assembly is at best confusing.
+            if (Test-Path $destination) { Remove-Item $destination -Recurse -Force }
+
             Copy-Payload -Source $source -Destination $destination
             Write-Host ("  {0}: installed -> {1}" -f $label, $destination) -ForegroundColor Green
             $installed += $label

@@ -45,6 +45,16 @@ ABSwitchBack.Navisworks      built once per Navisworks release  -p:NavisVersion=
   ElementIdExtractor         finds the Revit id in the item's properties
 ```
 
+**How Core is consumed differs by host, deliberately.** Revit references it as a second
+assembly, because Revit probes the add-in folder for dependencies. The Navisworks plugin
+**compiles the same Core sources in** and ships as one self-contained DLL, because
+Navisworks scans a plugin assembly for `[Plugin]` types *before any of our code has run* —
+so an `AssemblyResolve` handler registered from a static constructor is always too late. If
+a scanned type needs Core resolved at that moment (a value-type field such as an enum forces
+it, since the CLR must compute the type's layout), the scan throws
+`ReflectionTypeLoadException` and Navisworks silently loads **no plugins at all**: no ribbon,
+no listener, nothing. Test 9 in the self-test suite guards this.
+
 **Threading contract.** The pipe listener runs entirely on the thread pool and never calls
 the Autodesk API. In Revit it only enqueues an id and calls `ExternalEvent.Raise()`; all
 model work happens later on the UI thread inside `IExternalEventHandler.Execute`. Neither
@@ -90,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -RevitYears 2024 -Navis
 powershell -ExecutionPolicy Bypass -File build\make-msi.ps1
 ```
 
-Produces `dist\ABSwitchBack-1.1.0.msi` — one per-machine package covering every release that
+Produces `dist\ABSwitchBack-1.1.1.msi` — one per-machine package covering every release that
 was compiled into `artifacts\`. Requires the WiX 5 CLI once:
 `dotnet tool install --global wix`.
 
