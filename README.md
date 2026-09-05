@@ -103,7 +103,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -RevitYears 2024 -Navis
 powershell -ExecutionPolicy Bypass -File build\make-msi.ps1
 ```
 
-Produces `dist\ABSwitchBack-1.1.0.msi` — one per-machine package covering every release that
+Produces `dist\ABSwitchBack-1.1.1.msi` — one per-machine package covering every release that
 was compiled into `artifacts\`. Requires the WiX 5 CLI once:
 `dotnet tool install --global wix`.
 
