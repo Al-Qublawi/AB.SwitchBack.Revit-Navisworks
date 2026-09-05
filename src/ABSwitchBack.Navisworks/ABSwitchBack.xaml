@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BEGIN STANDARD SECTION DO NOT EDIT -->
+<RibbonControl
+    x:Uid="ABSwitchBackRibbon" xmlns="clr-namespace:Autodesk.Windows;assembly=AdWindows"
+    xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:adwi="clr-namespace:Autodesk.Internal.Windows;assembly=AdWindows"
+    xmlns:system="clr-namespace:System;assembly=mscorlib"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Autodesk.Navisworks.Gui.Roamer.AIRLook;assembly=navisworks.gui.roamer">
+<!-- END STANDARD SECTION DO NOT EDIT -->
+
+  <!--
+    Button images are deliberately not set here. Navisworks resolves the Icon and
+    LargeIcon named on each [Command] attribute relative to the plugin DLL, which
+    avoids the path ambiguity that Image="..\Images\..." introduces once localised
+    XAML subfolders exist.
+  -->
+  <RibbonTab Id="ID_ABSBTab" Title="AB SwitchBack" KeyTip="AS">
+
+    <!-- Brand entry point: choose the Revit session that receives the elements. -->
+    <RibbonPanel x:Uid="ABSB_Panel_Target">
+      <RibbonPanelSource x:Uid="ABSB_Source_Target" KeyTip="SB" Title="SwitchBack">
+
+        <local:NWRibbonButton x:Uid="ABSB_Target" Id="ID_ABSB_Target"
+                              Size="Large"
+                              KeyTip="TG"
+                              ShowText="True"
+                              Orientation="Vertical" />
+
+        <local:NWRibbonButton x:Uid="ABSB_Status" Id="ID_ABSB_Status"
+                              Size="Large"
+                              KeyTip="ST"
+                              ShowText="True"
+                              Orientation="Vertical" />
+
+      </RibbonPanelSource>
+    </RibbonPanel>
+
+    <!-- Author identity, matching the other AB add-ins. -->
+    <RibbonPanel x:Uid="ABSB_Panel_About">
+      <RibbonPanelSource x:Uid="ABSB_Source_About" KeyTip="AB" Title="About">
+
+        <RibbonRowPanel x:Uid="ABSB_Row_About">
+
+          <local:NWRibbonButton x:Uid="ABSB_About" Id="ID_ABSB_About"
+                                KeyTip="AT"
+                                ShowText="True"
+                                Orientation="Horizontal" />
+
+          <RibbonRowBreak x:Uid="ABSB_Break_1" />
+
+          <local:NWRibbonButton x:Uid="ABSB_LinkedIn" Id="ID_ABSB_LinkedIn"
+                                KeyTip="LI"
+                                ShowText="True"
+                                Orientation="Horizontal" />
+
+        </RibbonRowPanel>
+
+      </RibbonPanelSource>
+    </RibbonPanel>
+
+  </RibbonTab>
+
+<!-- BEGIN STANDARD SECTION DO NOT EDIT -->
+</RibbonControl>
+<!-- END STANDARD SECTION DO NOT EDIT -->

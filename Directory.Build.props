@@ -1,0 +1,44 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Company>ABSwitchBack</Company>
+    <Product>AB SwitchBack</Product>
+    <Version>1.0.1</Version>
+    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <Copyright>AB SwitchBack</Copyright>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>portable</DebugType>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+  </PropertyGroup>
+
+  <!--
+    The same project is built once per Autodesk release, so each version needs its own
+    intermediate folder. This MUST be set here: Microsoft.Common.props consumes
+    BaseIntermediateOutputPath, and setting it inside the .csproj is too late (MSB3539).
+    RevitVersion / NavisVersion arrive as global properties from build.ps1 and also flow
+    down to referenced projects, keeping Core's obj separated per version too.
+  -->
+  <PropertyGroup Condition="'$(RevitVersion)' != ''">
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\rvt$(RevitVersion)\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(NavisVersion)' != ''">
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\nw$(NavisVersion)\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+
+  <!--
+    Only the *current* BaseIntermediateOutputPath is excluded from default globs, so
+    sibling version folders (obj\rvt2020 while building 2026) would otherwise be compiled
+    in and produce duplicate assembly attributes. Exclude every obj/bin subtree outright.
+  -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,90 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Built once per Navisworks release:
+      dotnet build -p:NavisVersion=2027 -p:NavisApiDir="<install>"
+
+    Navisworks is still a .NET Framework 4.8 host in every release from 2024 to 2027
+    (no hostfxr.dll / runtimeconfig.json in the install), so one TFM covers them all.
+    The assembly name must match the plugin folder name: Plugins\ABSwitchBack\ABSwitchBack.dll
+  -->
+  <PropertyGroup>
+    <NavisVersion Condition="'$(NavisVersion)' == ''">2026</NavisVersion>
+    <TargetFramework>net48</TargetFramework>
+
+    <AssemblyName>ABSwitchBack</AssemblyName>
+    <RootNamespace>ABSwitchBack.Navisworks</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+
+    <OutputPath>$(RepoRoot)artifacts\Navisworks\$(NavisVersion)\ABSwitchBack\</OutputPath>
+    <DefineConstants>$(DefineConstants);NAVIS$(NavisVersion)</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(NavisApiDir)' == ''">
+    <NavisApiDir>$(ProgramFiles)\Autodesk\Navisworks Manage $(NavisVersion)</NavisApiDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Autodesk.Navisworks.Api">
+      <HintPath>$(NavisApiDir)\Autodesk.Navisworks.Api.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ABSwitchBack.Core\ABSwitchBack.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Lets the running plugin report which release it was compiled against. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NavisVersion</_Parameter1>
+      <_Parameter2>$(NavisVersion)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <!--
+    Navisworks reads the button images as loose files beside the plugin DLL, resolved
+    from an Images folder, so they cannot be embedded. Linked from assets\ to keep one
+    copy of each image in the repository.
+  -->
+  <ItemGroup>
+    <None Include="$(RepoRoot)assets\logo_16.ico" Link="Images\logo_16.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(RepoRoot)assets\logo_32.ico" Link="Images\logo_32.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(RepoRoot)assets\status_16.ico" Link="Images\status_16.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(RepoRoot)assets\status_32.ico" Link="Images\status_32.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(RepoRoot)assets\linkedin_16.ico" Link="Images\linkedin_16.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(RepoRoot)assets\linkedin_32.ico" Link="Images\linkedin_32.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!--
+    Navisworks looks for a plugin's ribbon layout in a LOCALE subfolder beside the
+    assembly - en-US\ABSwitchBack.xaml - not in the assembly folder itself. Putting the
+    file next to the DLL means the tab silently never appears.
+  -->
+  <Target Name="CopyRibbonLayout" AfterTargets="Build">
+    <Copy SourceFiles="ABSwitchBack.xaml"
+          DestinationFolder="$(OutputPath)en-US"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="VerifyNavisApi" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(NavisApiDir)\Autodesk.Navisworks.Api.dll')"
+           Text="Autodesk.Navisworks.Api.dll not found under '$(NavisApiDir)'. Pass -p:NavisApiDir=... or run build/build.ps1 which auto-detects installs." />
+  </Target>
+
+</Project>

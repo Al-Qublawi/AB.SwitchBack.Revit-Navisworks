@@ -1,0 +1,82 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Built once per Revit release:  dotnet build -p:RevitVersion=2024 -p:RevitApiDir="<install>"
+    RevitApiDir is discovered at build time (registry first) by build/build.ps1 - never hard-coded.
+  -->
+  <PropertyGroup>
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2024</RevitVersion>
+
+    <!-- Revit 2020-2024 run on .NET Framework; 2025+ run on .NET 8. -->
+    <TargetFramework Condition="'$(RevitVersion)' &lt; '2025'">net48</TargetFramework>
+    <TargetFramework Condition="'$(RevitVersion)' &gt;= '2025'">net8.0-windows</TargetFramework>
+
+    <AssemblyName>ABSwitchBack.Revit</AssemblyName>
+    <RootNamespace>ABSwitchBack.Revit</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+
+    <OutputPath>$(RepoRoot)artifacts\Revit\$(RevitVersion)\</OutputPath>
+
+    <DefineConstants>$(DefineConstants);REVIT$(RevitVersion)</DefineConstants>
+  </PropertyGroup>
+
+  <!-- ElementId became 64-bit in Revit 2024; the int overloads were removed in 2025. -->
+  <PropertyGroup Condition="'$(RevitVersion)' &gt;= '2024'">
+    <DefineConstants>$(DefineConstants);REVIT2024_OR_LATER</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RevitApiDir)' == ''">
+    <RevitApiDir>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)</RevitApiDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitApiDir)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitApiDir)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ABSwitchBack.Core\ABSwitchBack.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    Icons ride inside the assembly rather than as loose files: the add-in folder sits
+    beside the .addin manifest in every user's profile, and keeping it to two DLLs makes
+    deployment and troubleshooting far simpler. Sourced straight from assets\ so there is
+    one copy of each image in the repository.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(RepoRoot)assets\logo_16.png">
+      <LogicalName>ABSwitchBack.Revit.Resources.logo_16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(RepoRoot)assets\logo_32.png">
+      <LogicalName>ABSwitchBack.Revit.Resources.logo_32.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(RepoRoot)assets\status_16.png">
+      <LogicalName>ABSwitchBack.Revit.Resources.status_16.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(RepoRoot)assets\status_32.png">
+      <LogicalName>ABSwitchBack.Revit.Resources.status_32.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(RepoRoot)assets\linkedin_16.ico">
+      <LogicalName>ABSwitchBack.Revit.Resources.linkedin_16.ico</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(RepoRoot)assets\linkedin_32.ico">
+      <LogicalName>ABSwitchBack.Revit.Resources.linkedin_32.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <Target Name="VerifyRevitApi" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')"
+           Text="RevitAPI.dll not found under '$(RevitApiDir)'. Pass -p:RevitApiDir=... or run build/build.ps1 which auto-detects installs." />
+  </Target>
+
+</Project>

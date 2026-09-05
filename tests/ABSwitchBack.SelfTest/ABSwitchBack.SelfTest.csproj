@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Exercises the real compiled Core assembly: protocol, named pipes and instance
+    discovery. net48 so it can also reflect over the Navisworks plugin, which is a
+    .NET Framework assembly.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>ABSwitchBack.SelfTest</AssemblyName>
+    <RootNamespace>ABSwitchBack.SelfTest</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath>$(RepoRoot)artifacts\SelfTest\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ABSwitchBack.Core\ABSwitchBack.Core.csproj" />
+  </ItemGroup>
+
+</Project>

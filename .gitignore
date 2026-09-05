@@ -1,0 +1,32 @@
+# ---- build output ------------------------------------------------------
+artifacts/
+dist/
+bin/
+obj/
+*.pdb
+
+# The generated WiX source and the .msi are rebuilt by build\make-msi.ps1;
+# the installer ships as a GitHub release asset, not in the tree.
+*.msi
+*.wixpdb
+
+# ---- code signing ------------------------------------------------------
+# Never commit a signing certificate or its password.
+*.pfx
+*.p12
+*.snk
+
+# ---- IDE / tooling -----------------------------------------------------
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+# ---- scratch -----------------------------------------------------------
+.testout/
+*.log
+
+# ---- promo / marketing assets (not part of the product) ----
+.promo/
