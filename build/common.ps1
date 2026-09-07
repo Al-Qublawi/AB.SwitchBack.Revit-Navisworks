@@ -9,7 +9,9 @@
 
 $ErrorActionPreference = 'Stop'
 
-$script:RevitYears  = 2020..2027
+# The releases a package is built for. These are what the NuGet reference assemblies
+# cover, so nothing here depends on what happens to be installed on the build machine.
+$script:RevitYears  = 2020..2026
 $script:NavisYears  = 2024..2027
 $script:NavisProducts = @('Manage', 'Simulate')
 

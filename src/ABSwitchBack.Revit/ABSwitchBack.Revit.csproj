@@ -28,11 +28,27 @@
     <DefineConstants>$(DefineConstants);REVIT2024_OR_LATER</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(RevitApiDir)' == ''">
-    <RevitApiDir>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)</RevitApiDir>
+  <!--
+    API source: NuGet reference assemblies by default; the installed SDK only when
+    RevitApiDir is passed explicitly.
+
+    Building against whatever is installed is NOT reproducible. A Revit 2026 update
+    published in September 2026 moved that release from .NET 8 to .NET 10 in place, so the
+    same source built on two machines a week apart produced add-ins with different runtime
+    requirements - and one built against the updated SDK will not load for anyone who has
+    not taken the update. The reference packages pin the baseline API for each year, which
+    loads on both original and updated installs.
+
+    It also means the whole matrix builds on a machine with no Autodesk products at all.
+    The Autodesk assemblies are NOT redistributable, so none are committed here -
+    referencing a public package commits nothing.
+  -->
+  <PropertyGroup>
+    <UseLocalRevitApi>false</UseLocalRevitApi>
+    <UseLocalRevitApi Condition="'$(RevitApiDir)' != '' And Exists('$(RevitApiDir)\RevitAPI.dll')">true</UseLocalRevitApi>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseLocalRevitApi)' == 'true'">
     <Reference Include="RevitAPI">
       <HintPath>$(RevitApiDir)\RevitAPI.dll</HintPath>
       <Private>false</Private>
@@ -41,6 +57,17 @@
       <HintPath>$(RevitApiDir)\RevitAPIUI.dll</HintPath>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <!--
+    ExcludeAssets=runtime keeps the Revit assemblies out of the add-in folder: Revit
+    supplies its own, and shipping a second copy is a classic way to break an add-in.
+  -->
+  <ItemGroup Condition="'$(UseLocalRevitApi)' != 'true'">
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*"
+                      ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*"
+                      ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -74,9 +101,11 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <Target Name="VerifyRevitApi" BeforeTargets="BeforeBuild">
-    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')"
-           Text="RevitAPI.dll not found under '$(RevitApiDir)'. Pass -p:RevitApiDir=... or run build/build.ps1 which auto-detects installs." />
+  <Target Name="ReportRevitApiSource" BeforeTargets="BeforeBuild">
+    <Message Importance="normal" Condition="'$(UseLocalRevitApi)' == 'true'"
+             Text="Revit $(RevitVersion): using the installed SDK at $(RevitApiDir)" />
+    <Message Importance="normal" Condition="'$(UseLocalRevitApi)' != 'true'"
+             Text="Revit $(RevitVersion): not installed here, using NuGet reference assemblies" />
   </Target>
 
 </Project>

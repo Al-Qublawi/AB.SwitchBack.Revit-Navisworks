@@ -22,15 +22,36 @@
     <DefineConstants>$(DefineConstants);NAVIS$(NavisVersion)</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(NavisApiDir)' == ''">
-    <NavisApiDir>$(ProgramFiles)\Autodesk\Navisworks Manage $(NavisVersion)</NavisApiDir>
+  <!-- VariantData gained its 64-bit and unsigned accessors in the 2026 release. -->
+  <PropertyGroup Condition="'$(NavisVersion)' &gt;= '2026'">
+    <DefineConstants>$(DefineConstants);NAVIS2026_OR_LATER</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!--
+    API source: the installed product when it is on this machine, otherwise NuGet
+    reference assemblies, so every supported release can be built on a machine with no
+    Autodesk products at all. The Autodesk assemblies are NOT redistributable, so none
+    are committed to this repository.
+  -->
+  <PropertyGroup>
+    <UseLocalNavisApi>false</UseLocalNavisApi>
+    <UseLocalNavisApi Condition="'$(NavisApiDir)' != '' And Exists('$(NavisApiDir)\Autodesk.Navisworks.Api.dll')">true</UseLocalNavisApi>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(UseLocalNavisApi)' == 'true'">
     <Reference Include="Autodesk.Navisworks.Api">
       <HintPath>$(NavisApiDir)\Autodesk.Navisworks.Api.dll</HintPath>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <!--
+    ExcludeAssets=runtime keeps the Navisworks assemblies out of the plugin folder:
+    Navisworks supplies its own, and a second copy beside the plugin breaks loading.
+  -->
+  <ItemGroup Condition="'$(UseLocalNavisApi)' != 'true'">
+    <PackageReference Include="Speckle.Navisworks.API" Version="$(NavisVersion).*"
+                      ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <!--
@@ -105,9 +126,11 @@
           SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="VerifyNavisApi" BeforeTargets="BeforeBuild">
-    <Error Condition="!Exists('$(NavisApiDir)\Autodesk.Navisworks.Api.dll')"
-           Text="Autodesk.Navisworks.Api.dll not found under '$(NavisApiDir)'. Pass -p:NavisApiDir=... or run build/build.ps1 which auto-detects installs." />
+  <Target Name="ReportNavisApiSource" BeforeTargets="BeforeBuild">
+    <Message Importance="normal" Condition="'$(UseLocalNavisApi)' == 'true'"
+             Text="Navisworks $(NavisVersion): using the installed product at $(NavisApiDir)" />
+    <Message Importance="normal" Condition="'$(UseLocalNavisApi)' != 'true'"
+             Text="Navisworks $(NavisVersion): not installed here, using NuGet reference assemblies" />
   </Target>
 
 </Project>

@@ -16,14 +16,36 @@ comes to the foreground.
 
 ## Version support
 
-| Host | Releases | Runtime | Notes |
+**Revit 2020–2026** and **Navisworks 2024–2027**. Every one is built and shipped in the
+installer; there is one binary per release.
+
+| Host | Releases | Runtime | API difference handled |
 |---|---|---|---|
 | Revit | 2020 – 2024 | .NET Framework 4.8 | `ElementId(int)` / `IntegerValue` |
-| Revit | 2025 – 2027 | .NET 8 | `ElementId(long)` / `.Value` — the `int` overloads were **removed** in 2025 |
-| Navisworks | 2024 – 2027 | .NET Framework 4.8 | Navisworks has not moved to .NET 8 as of the 2027 release |
+| Revit | 2025 – 2026 | .NET 8 | `ElementId(long)` / `.Value` — the `int` overloads were **removed** in 2025 |
+| Navisworks | 2024 – 2025 | .NET Framework 4.8 | `VariantData` has `IsInt32` only |
+| Navisworks | 2026 – 2027 | .NET Framework 4.8 | `VariantData` **gained** `IsInt64`, `IsNat32`, `IsNat64` in 2026 |
 
-Projects exist for the whole range. `build.ps1` detects what is installed and builds only
-that, so installing a newer Autodesk release later needs no code change — just re-run it.
+Each split is isolated to one file — `RevitCompat.cs` and `NavisCompat.cs`. Everything else
+is version-neutral.
+
+### Building does not require Autodesk products
+
+The projects reference **NuGet API packages** by default
+(`Nice3point.Revit.Api.*`, `Speckle.Navisworks.API`), so the full matrix builds on any
+machine. Autodesk's assemblies are not redistributable and none are committed here.
+
+This is deliberately not "build against whatever is installed". A Revit 2026 update in
+September 2026 moved that release from .NET 8 to .NET 10 *in place*, so the same source
+built a week apart produced add-ins with different runtime requirements — and one built
+against the updated SDK will not load for anyone who has not taken the update. The
+reference packages pin the baseline API for each year, which loads on both.
+
+To build against local SDKs anyway:
+
+```bash
+powershell -ExecutionPolicy Bypass -File build\build.ps1 -UseInstalledSdk
+```
 
 ## Architecture
 
@@ -87,9 +109,8 @@ Navisworks instances coexist.
 powershell -ExecutionPolicy Bypass -File build\build.ps1
 ```
 
-Detection order for both products: the product's own registry key, then the Windows
-uninstall registry, then the conventional Program Files layout — each candidate validated
-by checking the API assembly actually exists. No path is hard-coded.
+Builds all 11 targets: Revit 2020-2026 and Navisworks 2024-2027. No Autodesk product
+needs to be installed.
 
 Build one target only:
 
@@ -103,7 +124,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -RevitYears 2024 -Navis
 powershell -ExecutionPolicy Bypass -File build\make-msi.ps1
 ```
 
-Produces `dist\ABSwitchBack-1.1.1.msi` — one per-machine package covering every release that
+Produces `dist\ABSwitchBack-1.2.0.msi` — one per-machine package covering every release that
 was compiled into `artifacts\`. Requires the WiX 5 CLI once:
 `dotnet tool install --global wix`.
 
@@ -118,8 +139,8 @@ means re-running `build.ps1` then `make-msi.ps1` — never editing XML.
 The team member just double-clicks the MSI and accepts the UAC prompt. Uninstall from
 Add/Remove Programs.
 
-> **Coverage:** the MSI can only contain versions that were compiled, which means versions
-> installed on the build machine. Check what it will deploy before sharing:
+> **Coverage:** the package carries every release listed above. Check what it will deploy
+> before sharing:
 >
 > ```bash
 > powershell -ExecutionPolicy Bypass -File build\verify-msi.ps1

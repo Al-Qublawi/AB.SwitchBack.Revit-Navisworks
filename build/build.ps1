@@ -19,7 +19,12 @@ param(
     [int[]]$NavisYears,
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
-    [switch]$Clean
+    [switch]$Clean,
+
+    # Build against the SDKs installed on this machine rather than the NuGet reference
+    # assemblies. Not the default: an Autodesk update can change a local SDK in place, so
+    # the result depends on when the build ran.
+    [switch]$UseInstalledSdk
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,39 +38,43 @@ if ($Clean -and (Test-Path $artifacts)) {
     Remove-Item $artifacts -Recurse -Force
 }
 
-Write-Section 'Detecting installed Autodesk products'
+Write-Section 'Build matrix'
 
-$revitInstalls = @(Get-RevitInstalls)
-$navisInstalls = @(Get-NavisworksInstalls)
+# Every declared release is built, whether or not it is installed here: the projects
+# reference NuGet API packages by default, so the output does not depend on which Autodesk
+# products happen to be on the build machine, or on updates Autodesk pushes to them.
+$revitTargets = if ($RevitYears) { @($RevitYears) } else { @($script:RevitYears) }
+$navisTargets = if ($NavisYears) { @($NavisYears) } else { @($script:NavisYears) }
 
-if ($RevitYears) { $revitInstalls = @($revitInstalls | Where-Object { $RevitYears -contains $_.Year }) }
-if ($NavisYears) { $navisInstalls = @($navisInstalls | Where-Object { $NavisYears -contains $_.Year }) }
+Write-Host ("  Revit:       " + ($revitTargets -join ', '))
+Write-Host ("  Navisworks:  " + ($navisTargets -join ', '))
+Write-Host ''
+Write-Host '  API source: NuGet reference assemblies (no Autodesk install required).' -ForegroundColor DarkGray
+Write-Host '  Pass -UseInstalledSdk to build against the SDKs on this machine instead.' -ForegroundColor DarkGray
 
-if ($revitInstalls.Count -eq 0) { Write-Host '  Revit:       none found' -ForegroundColor Yellow }
-foreach ($install in $revitInstalls) {
-    Write-Host ("  Revit {0}  [{1}]  {2}" -f $install.Year, $install.Runtime, $install.Path)
-}
-
-if ($navisInstalls.Count -eq 0) { Write-Host '  Navisworks:  none found' -ForegroundColor Yellow }
-foreach ($install in $navisInstalls) {
-    Write-Host ("  Navisworks {0} {1}  [{2}]  {3}" -f $install.Product, $install.Year, $install.Runtime, $install.Path)
-}
-
-if ($revitInstalls.Count -eq 0 -and $navisInstalls.Count -eq 0) {
-    throw 'No Revit or Navisworks installation was found. Nothing to build.'
+if ($UseInstalledSdk) {
+    Write-Host ''
+    Write-Host '  -UseInstalledSdk: building against locally installed SDKs where found.' -ForegroundColor Yellow
+    Write-Host '  Note that an Autodesk update can change a local SDK''s runtime in place,' -ForegroundColor Yellow
+    Write-Host '  producing an add-in that will not load for anyone without that update.' -ForegroundColor Yellow
 }
 
 $results = @()
 
 Write-Section 'Building Revit add-ins'
 
-foreach ($install in $revitInstalls) {
-    $year = $install.Year
+foreach ($year in $revitTargets) {
     Write-Host "  Revit $year ... " -NoNewline
 
     $project = Join-Path $repoRoot 'src\ABSwitchBack.Revit\ABSwitchBack.Revit.csproj'
-    $output  = & dotnet build $project -c $Configuration -v quiet --nologo `
-        "-p:RevitVersion=$year" "-p:RevitApiDir=$($install.Path)" 2>&1
+    $arguments = @($project, '-c', $Configuration, '-v', 'quiet', '--nologo', "-p:RevitVersion=$year")
+
+    if ($UseInstalledSdk) {
+        $local = Get-RevitInstallPath -Year $year
+        if ($local) { $arguments += "-p:RevitApiDir=$local" }
+    }
+
+    $output = & dotnet build @arguments 2>&1
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host 'OK' -ForegroundColor Green
@@ -85,15 +94,21 @@ foreach ($install in $revitInstalls) {
 
 Write-Section 'Building Navisworks plugins'
 
-# One binary serves every Navisworks release of the same API major version, but each is
-# built separately so the reference always matches the installed assembly exactly.
-foreach ($install in ($navisInstalls | Group-Object Year | ForEach-Object { $_.Group[0] })) {
-    $year = $install.Year
+# One build per release: VariantData gained its 64-bit accessors in 2026, so 2024/2025 and
+# 2026/2027 are not interchangeable. See NavisCompat.
+foreach ($year in $navisTargets) {
     Write-Host "  Navisworks $year ... " -NoNewline
 
     $project = Join-Path $repoRoot 'src\ABSwitchBack.Navisworks\ABSwitchBack.Navisworks.csproj'
-    $output  = & dotnet build $project -c $Configuration -v quiet --nologo `
-        "-p:NavisVersion=$year" "-p:NavisApiDir=$($install.Path)" 2>&1
+    $arguments = @($project, '-c', $Configuration, '-v', 'quiet', '--nologo', "-p:NavisVersion=$year")
+
+    if ($UseInstalledSdk) {
+        $local = Get-NavisworksInstallPath -Year $year -Product 'Manage'
+        if (-not $local) { $local = Get-NavisworksInstallPath -Year $year -Product 'Simulate' }
+        if ($local) { $arguments += "-p:NavisApiDir=$local" }
+    }
+
+    $output = & dotnet build @arguments 2>&1
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host 'OK' -ForegroundColor Green

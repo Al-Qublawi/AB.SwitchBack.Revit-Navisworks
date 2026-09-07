@@ -157,27 +157,12 @@ namespace ABSwitchBack.Navisworks
 
             try
             {
-                if (value.IsInt32) { elementId = value.ToInt32(); return elementId > 0; }
-                if (value.IsInt64) { elementId = value.ToInt64(); return elementId > 0; }
+                // Numeric types the running release actually exposes; see NavisCompat.
+                if (NavisCompat.TryReadNumeric(value, out elementId)) return true;
 
-                if (value.IsNat32) { elementId = value.ToNat32(); return elementId > 0; }
-                if (value.IsNat64)
-                {
-                    ulong raw = value.ToNat64();
-                    if (raw > long.MaxValue) return false;
-                    elementId = (long)raw;
-                    return elementId > 0;
-                }
-
-                if (value.IsDouble || value.IsAnyDouble)
-                {
-                    double d = value.ToAnyDouble();
-                    if (Math.Abs(d - Math.Round(d)) > 0.0001) return false;
-                    elementId = (long)Math.Round(d);
-                    return elementId > 0;
-                }
-
-                // Strings: display strings, identifier strings, named constants.
+                // Strings: display strings, identifier strings, named constants. This also
+                // catches 64-bit and unsigned values on Navisworks 2024 and 2025, whose
+                // VariantData has no typed accessor for them.
                 string text = value.ToDisplayString();
                 return TryParseIdText(text, out elementId);
             }
