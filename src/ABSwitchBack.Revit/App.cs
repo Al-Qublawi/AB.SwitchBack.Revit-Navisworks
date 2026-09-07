@@ -4,6 +4,10 @@ using System.Reflection;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using TaskDialog = Autodesk.Revit.UI.TaskDialog;
+using TaskDialogResult = Autodesk.Revit.UI.TaskDialogResult;
+using TaskDialogCommonButtons = Autodesk.Revit.UI.TaskDialogCommonButtons;
+using TaskDialogCommandLinkId = Autodesk.Revit.UI.TaskDialogCommandLinkId;
 using ABSwitchBack.Core;
 using ABSwitchBack.Core.Discovery;
 using ABSwitchBack.Core.Ipc;
@@ -30,6 +34,9 @@ namespace ABSwitchBack.Revit
         private SwitchBackEventHandler _handler;
         private UIControlledApplication _uiCtrlApp;
         private string _versionNumber = "0";
+
+        // Set by the background update check, shown once Revit is idle with a view open.
+        private volatile UpdateInfo _pendingUpdate;
 
         // The window handle is taken from the live UIApplication at the moment it is
         // needed (see SwitchBackEventHandler), so nothing is cached here.
@@ -61,6 +68,19 @@ namespace ABSwitchBack.Revit
                 _server.Start();
 
                 BuildRibbon(application);
+
+                // Background: never blocks Revit starting. The result is shown later, from
+                // ViewActivated, where a dialog is safe.
+                System.Threading.Tasks.Task.Factory.StartNew(() =>
+                {
+                    UpdateInfo info = UpdateCheck.Check();
+                    if (info != null && info.ShouldNotify)
+                    {
+                        _pendingUpdate = info;
+                        Log.Info("Update available: " + info.LatestVersion +
+                                 " (running " + Branding.Version + ")");
+                    }
+                });
 
                 // Keep the advertised document name current so the Navisworks picker is useful.
                 try { application.ViewActivated += OnViewActivated; }
@@ -100,10 +120,43 @@ namespace ABSwitchBack.Revit
             return Result.Succeeded;
         }
 
+        /// <summary>
+        /// The update notice waits for this: Revit is idle with a document open, which is a
+        /// safe moment for a dialog. Popping one during OnStartup can stall the splash
+        /// screen or sit behind it unseen.
+        /// </summary>
+        private void ShowUpdateNoticeOnce()
+        {
+            UpdateInfo info = _pendingUpdate;
+            if (info == null) return;
+            _pendingUpdate = null;
+
+            try
+            {
+                UpdateCheck.MarkNotified(info.LatestVersion);
+
+                var dialog = new TaskDialog(Branding.ProductName);
+                dialog.MainInstruction = Branding.ProductName + " " + info.LatestVersion + " is available.";
+                dialog.MainContent = "You are running " + Branding.Version + "." + Environment.NewLine +
+                                     Environment.NewLine +
+                                     "You can turn this check off in Settings, on the Navisworks ribbon.";
+                dialog.CommonButtons = TaskDialogCommonButtons.Close;
+                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Open the download page");
+
+                if (dialog.Show() == TaskDialogResult.CommandLink1) UpdateCheck.OpenReleasesPage();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not show the update notice: " + ex.Message);
+            }
+        }
+
         private void OnViewActivated(object sender, ViewActivatedEventArgs e)
         {
             try
             {
+                ShowUpdateNoticeOnce();
+
                 if (_registry != null && e.Document != null)
                     _registry.UpdateDocument(e.Document.Title);
             }

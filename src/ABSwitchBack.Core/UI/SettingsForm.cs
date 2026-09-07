@@ -25,6 +25,7 @@ namespace ABSwitchBack.Core.UI
         private readonly NumericUpDown _margin;
         private readonly CheckBox _createView;
         private readonly Label _readOnlyHint;
+        private readonly CheckBox _checkUpdates;
 
         private bool _loading;
 
@@ -40,7 +41,7 @@ namespace ABSwitchBack.Core.UI
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Font;
             Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(470, 452);
+            ClientSize = new Size(470, 496);
 
             // ---------------------------------------------------------- trigger
             var triggerGroup = new GroupBox
@@ -145,11 +146,27 @@ namespace ABSwitchBack.Core.UI
                 _sectionBox, marginLabel, _margin, _createView, _readOnlyHint
             });
 
+            // ---------------------------------------------------------- updates
+            _checkUpdates = new CheckBox
+            {
+                Text = "Tell me when a newer version is released",
+                Location = new Point(14, 384),
+                Size = new Size(300, 22)
+            };
+
+            var updateHint = new Label
+            {
+                Text = "Asks GitHub once a day. Nothing is uploaded.",
+                Location = new Point(30, 406),
+                Size = new Size(430, 18),
+                ForeColor = SystemColors.GrayText
+            };
+
             // ---------------------------------------------------------- buttons
             var reset = new Button
             {
                 Text = "Reset to defaults",
-                Location = new Point(12, 388),
+                Location = new Point(12, 432),
                 Size = new Size(130, 28)
             };
             reset.Click += (s, e) => LoadValues(new SwitchBackConfig());
@@ -157,7 +174,7 @@ namespace ABSwitchBack.Core.UI
             var save = new Button
             {
                 Text = "Save",
-                Location = new Point(268, 388),
+                Location = new Point(268, 432),
                 Size = new Size(90, 28),
                 DialogResult = DialogResult.OK
             };
@@ -166,7 +183,7 @@ namespace ABSwitchBack.Core.UI
             var cancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(368, 388),
+                Location = new Point(368, 432),
                 Size = new Size(90, 28),
                 DialogResult = DialogResult.Cancel
             };
@@ -174,13 +191,16 @@ namespace ABSwitchBack.Core.UI
             var pathHint = new Label
             {
                 Text = Paths.ConfigFile,
-                Location = new Point(12, 424),
+                Location = new Point(12, 468),
                 Size = new Size(446, 20),
                 ForeColor = SystemColors.GrayText,
                 AutoEllipsis = true
             };
 
-            Controls.AddRange(new Control[] { triggerGroup, revitGroup, reset, save, cancel, pathHint });
+            Controls.AddRange(new Control[]
+            {
+                triggerGroup, revitGroup, _checkUpdates, updateHint, reset, save, cancel, pathHint
+            });
 
             AcceptButton = save;
             CancelButton = cancel;
@@ -203,6 +223,7 @@ namespace ABSwitchBack.Core.UI
                 _sectionBox.Checked = config.CreateSectionBox;
                 _margin.Value = Clamp(config.SectionBoxMarginMm, _margin.Minimum, _margin.Maximum);
                 _createView.Checked = config.CreateViewIfMissing;
+                _checkUpdates.Checked = config.CheckForUpdates;
             }
             finally
             {
@@ -284,6 +305,7 @@ namespace ABSwitchBack.Core.UI
             _config.CreateSectionBox = _sectionBox.Checked;
             _config.SectionBoxMarginMm = (double)_margin.Value;
             _config.CreateViewIfMissing = _createView.Checked;
+            _config.CheckForUpdates = _checkUpdates.Checked;
             _config.Save();
 
             Log.Info("Settings saved. Trigger=" + _config.Trigger +

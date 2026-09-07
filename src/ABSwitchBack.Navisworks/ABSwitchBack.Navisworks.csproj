@@ -75,6 +75,11 @@
              LinkBase="Core" />
   </ItemGroup>
 
+  <!-- Core uses HttpClient for the update check; net48 needs it referenced explicitly. -->
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
   <!-- Lets the running plugin report which release it was compiled against. -->
   <ItemGroup>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">

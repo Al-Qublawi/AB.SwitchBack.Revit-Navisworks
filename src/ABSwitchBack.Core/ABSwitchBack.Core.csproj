@@ -14,4 +14,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="ABSwitchBack.SelfTest" />
   </ItemGroup>
+
+  <!-- HttpClient needs an explicit reference on .NET Framework; it is built in on .NET 8. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
 </Project>

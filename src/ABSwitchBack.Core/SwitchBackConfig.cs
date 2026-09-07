@@ -40,6 +40,12 @@ namespace ABSwitchBack.Core
         /// </summary>
         public string Trigger { get { return GetString("Trigger", "Ctrl"); } set { Set("Trigger", value); } }
 
+        /// <summary>
+        /// Whether to ask GitHub once a day if a newer release exists. A single anonymous
+        /// GET to the public releases API; nothing is uploaded and no telemetry is collected.
+        /// </summary>
+        public bool CheckForUpdates { get { return GetBool("CheckForUpdates", true); } set { Set("CheckForUpdates", value); } }
+
         /// <summary>Named-pipe connect/response timeout, in milliseconds.</summary>
         public int PipeTimeoutMs { get { return Clamp(GetInt("PipeTimeoutMs", 3000), 500, 30000); } set { Set("PipeTimeoutMs", value); } }
 
@@ -155,6 +161,9 @@ namespace ABSwitchBack.Core
                 sb.AppendLine("# e.g. Ctrl+Alt. Use None to send every element you select.");
                 sb.AppendLine("# Ctrl+Shift is intercepted by Navisworks and selects the whole file - avoid it.");
                 sb.AppendLine("Trigger=Ctrl");
+                sb.AppendLine("# Ask GitHub once a day whether a newer release exists.");
+                sb.AppendLine("# One anonymous GET to the public releases API; nothing is uploaded.");
+                sb.AppendLine("CheckForUpdates=true");
                 sb.AppendLine("# Named pipe connect/response timeout.");
                 sb.AppendLine("PipeTimeoutMs=3000");
                 File.WriteAllText(Paths.ConfigFile, sb.ToString(), Encoding.UTF8);
@@ -187,6 +196,14 @@ namespace ABSwitchBack.Core
                     additions.AppendLine("# Allow Revit to create a 3D view if the project has none that is usable.");
                     additions.AppendLine("# Set this AND CreateSectionBox to false to make the add-in strictly read-only.");
                     additions.AppendLine("CreateViewIfMissing=true");
+                }
+
+                if (!HasKey(lines, "CheckForUpdates"))
+                {
+                    additions.AppendLine();
+                    additions.AppendLine("# Ask GitHub once a day whether a newer release exists.");
+                    additions.AppendLine("# One anonymous GET to the public releases API; nothing is uploaded.");
+                    additions.AppendLine("CheckForUpdates=true");
                 }
 
                 if (additions.Length > 0) File.AppendAllText(Paths.ConfigFile, additions.ToString(), Encoding.UTF8);

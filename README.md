@@ -248,6 +248,22 @@ CreateSectionBox=false
 CreateViewIfMissing=false
 ```
 
+## Staying up to date
+
+Both hosts check once a day whether a newer release exists, and tell you **once per
+version** — never again for the same one. Clicking through opens the releases page; the
+MSI upgrades in place.
+
+Exactly what happens: a single anonymous `GET` to GitHub's public releases API, on a
+background thread. **Nothing is uploaded** — no telemetry, no identifiers, no usage data.
+Offline, behind a proxy, firewalled or rate-limited all fail silently. The notice never
+appears during startup: Navisworks shows it once the UI is up, Revit waits until a view is
+open and it is idle.
+
+Turn it off with the **Tell me when a newer version is released** checkbox in Settings, or
+`CheckForUpdates=false` in `config.txt` — useful if your clients' IT restricts outbound
+traffic from Revit or Navisworks.
+
 ## Configuration
 
 Use the **Settings** button on the **Navisworks** ribbon — there is no need to edit a file.
@@ -278,6 +294,7 @@ switch-back, so the Revit-side options take effect on the very next click.
 | `CreateViewIfMissing` | `true` | `false` = never create a 3D view (see *What it changes in your model*) |
 | `TriggerEnabled` | `true` | `false` disables the trigger entirely |
 | `Trigger` | `Ctrl` | Any combination of `Ctrl`, `Shift`, `Alt` (e.g. `Ctrl+Alt`), or `None`. Anything unrecognised falls back to `Ctrl` |
+| `CheckForUpdates` | `true` | `false` stops the daily GitHub version check entirely |
 | `PipeTimeoutMs` | `3000` | Connect/response timeout |
 
 Logs are per process: `%LOCALAPPDATA%\ABSwitchBack\logs\<Role>-<PID>.log`.
@@ -317,6 +334,7 @@ sections that do (7 and 9) skip themselves when nothing has been built.
 | 9 | The Navisworks plugin loading with no folder probing — guards the 1.1.0 regression |
 | 10 | **Selection diff**: which element a change was about, including every ambiguous case |
 | 11 | Config key matching and the legacy-key migration |
+| 12 | Update check: version comparison and release-tag parsing |
 
 The Autodesk-side behaviour (section box, zoom, ribbon) needs both applications running and
 has to be exercised by hand.

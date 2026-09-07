@@ -26,6 +26,21 @@ namespace ABSwitchBack.SelfTest
             Console.OutputEncoding = Encoding.UTF8;
             Log.Init("SelfTest");
 
+            // Live network probe, kept out of the suite so it can never fail a build offline.
+            if (args != null && Array.IndexOf(args, "--updatecheck") >= 0)
+            {
+                Console.WriteLine("Running version : " + Branding.Version);
+                string tag = UpdateCheck.FetchLatestTag();
+                Console.WriteLine("Latest on GitHub: " + (tag ?? "(unreachable)"));
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    int cmp = UpdateCheck.Compare(tag, Branding.Version);
+                    Console.WriteLine("Verdict         : " +
+                        (cmp > 0 ? "update available" : cmp == 0 ? "up to date" : "running newer than released"));
+                }
+                return 0;
+            }
+
             // Lets the settings dialog be opened outside Revit and Navisworks, for a quick
             // look at the layout without launching a 2 GB host application.
             if (args != null && Array.IndexOf(args, "--settings") >= 0)
@@ -67,6 +82,9 @@ namespace ABSwitchBack.SelfTest
 
             Section("11. Config keys and migration");
             TestConfigKeys();
+
+            Section("12. Update check");
+            TestUpdateCheck();
 
             Console.WriteLine();
             Console.WriteLine(new string('=', 62));
@@ -658,6 +676,50 @@ namespace ABSwitchBack.SelfTest
                 }
                 catch { }
             }
+        }
+
+        /// <summary>
+        /// Version comparison and tag parsing. A mistake here either nags everyone about an
+        /// update that does not exist, or stays silent when one does - and "1.10.0" beating
+        /// "1.9.0" is exactly the case a string comparison gets wrong.
+        /// </summary>
+        private static void TestUpdateCheck()
+        {
+            Check("newer patch is detected", UpdateCheck.Compare("1.1.1", "1.1.0") > 0);
+            Check("newer minor is detected", UpdateCheck.Compare("1.2.0", "1.1.9") > 0);
+            Check("newer major is detected", UpdateCheck.Compare("2.0.0", "1.9.9") > 0);
+            Check("same version is not newer", UpdateCheck.Compare("1.2.0", "1.2.0") == 0);
+            Check("older version is not newer", UpdateCheck.Compare("1.1.0", "1.2.0") < 0);
+
+            // Numeric, not lexical: "1.10.0" must beat "1.9.0".
+            Check("double-digit parts compare numerically", UpdateCheck.Compare("1.10.0", "1.9.0") > 0);
+            Check("double-digit majors compare numerically", UpdateCheck.Compare("10.0.0", "9.0.0") > 0);
+
+            // GitHub tags carry a leading v.
+            Check("a v prefix is ignored", UpdateCheck.Compare("v1.2.0", "1.2.0") == 0);
+            Check("normalise strips the v", UpdateCheck.Normalise("v1.2.0") == "1.2.0");
+            Check("normalise leaves a bare version", UpdateCheck.Normalise("1.2.0") == "1.2.0");
+
+            // Shorter and pre-release forms must not throw or mis-rank.
+            Check("missing parts count as zero", UpdateCheck.Compare("1.2", "1.2.0") == 0);
+            Check("pre-release suffix is tolerated", UpdateCheck.Compare("1.2.0-beta", "1.2.0") == 0);
+            Check("garbage does not throw", UpdateCheck.Compare("", "1.0.0") < 0);
+
+            // Extracting tag_name from a releases response.
+            string json = "{\"url\":\"https://x\",\"tag_name\":\"v1.2.0\",\"name\":\"AB SwitchBack 1.2.0\"}";
+            Check("tag_name is extracted", UpdateCheck.ExtractJsonString(json, "tag_name") == "v1.2.0");
+            Check("a different field is extracted",
+                  UpdateCheck.ExtractJsonString(json, "name") == "AB SwitchBack 1.2.0");
+            Check("a missing field returns null",
+                  UpdateCheck.ExtractJsonString(json, "nothing_here") == null);
+            Check("malformed json returns null", UpdateCheck.ExtractJsonString("not json", "tag_name") == null);
+            Check("empty input returns null", UpdateCheck.ExtractJsonString("", "tag_name") == null);
+
+            // The check is on by default, and must be switchable off.
+            var config = new SwitchBackConfig();
+            Check("update check is on by default", config.CheckForUpdates);
+            config.CheckForUpdates = false;
+            Check("update check can be turned off", !config.CheckForUpdates);
         }
 
         // ------------------------------------------------------------------ helpers

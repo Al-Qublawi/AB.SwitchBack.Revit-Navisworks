@@ -86,11 +86,43 @@ namespace ABSwitchBack.Navisworks
                 catch (Exception ex) { Log.Warn("ActiveDocumentChanged subscription failed: " + ex.Message); }
 
                 _watcher.AttachToActiveDocument();
+
+                StartUpdateCheck();
             }
             catch (Exception ex)
             {
                 Log.Error("SwitchBack failed to start in Navisworks.", ex);
             }
+        }
+
+        /// <summary>
+        /// Asks GitHub about newer releases on a background thread. Startup is never
+        /// blocked, and the notice is posted to the UI thread only when there is genuinely
+        /// something new that the user has not already been told about.
+        /// </summary>
+        private static void StartUpdateCheck()
+        {
+            Task.Factory.StartNew(() =>
+            {
+                UpdateInfo info = UpdateCheck.Check();
+                if (info == null || !info.ShouldNotify) return;
+
+                UpdateCheck.MarkNotified(info.LatestVersion);
+                Log.Info("Update available: " + info.LatestVersion + " (running " + Branding.Version + ")");
+
+                PostToUi(() =>
+                {
+                    DialogResult answer = MessageBox.Show(
+                        Branding.ProductName + " " + info.LatestVersion + " is available." +
+                        "\r\nYou are running " + Branding.Version + ".\r\n\r\n" +
+                        "Open the download page?\r\n\r\n" +
+                        "You can turn this check off in Settings.",
+                        Branding.ProductName + " - update available",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+                    if (answer == DialogResult.Yes) UpdateCheck.OpenReleasesPage();
+                });
+            });
         }
 
         public static void Stop()
