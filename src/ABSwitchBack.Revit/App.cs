@@ -4,10 +4,8 @@ using System.Reflection;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using TaskDialog = Autodesk.Revit.UI.TaskDialog;
-using TaskDialogResult = Autodesk.Revit.UI.TaskDialogResult;
-using TaskDialogCommonButtons = Autodesk.Revit.UI.TaskDialogCommonButtons;
-using TaskDialogCommandLinkId = Autodesk.Revit.UI.TaskDialogCommandLinkId;
+using ABAdvTools;
+using ABAdvTools.Revit;
 using ABSwitchBack.Core;
 using ABSwitchBack.Core.Discovery;
 using ABSwitchBack.Core.Ipc;
@@ -22,9 +20,8 @@ namespace ABSwitchBack.Revit
     /// </summary>
     public sealed class App : IExternalApplication
     {
-        private const string TabName = "AB SwitchBack";
+        /// <summary>SwitchBack's panel on the shared AB Adv Tools tab.</summary>
         private const string PanelName = "SwitchBack";
-        private const string AboutPanelName = "About";
 
         internal static App Current { get; private set; }
 
@@ -32,11 +29,7 @@ namespace ABSwitchBack.Revit
         private InstanceRegistry _registry;
         private ExternalEvent _externalEvent;
         private SwitchBackEventHandler _handler;
-        private UIControlledApplication _uiCtrlApp;
         private string _versionNumber = "0";
-
-        // Set by the background update check, shown once Revit is idle with a view open.
-        private volatile UpdateInfo _pendingUpdate;
 
         // The window handle is taken from the live UIApplication at the moment it is
         // needed (see SwitchBackEventHandler), so nothing is cached here.
@@ -46,7 +39,6 @@ namespace ABSwitchBack.Revit
         public Result OnStartup(UIControlledApplication application)
         {
             Current = this;
-            _uiCtrlApp = application;
 
             try
             {
@@ -56,7 +48,7 @@ namespace ABSwitchBack.Revit
                 try { _versionNumber = application.ControlledApplication.VersionNumber; }
                 catch { _versionNumber = "unknown"; }
 
-                Log.Info("Starting SwitchBack in Revit " + _versionNumber +
+                Log.Info("Starting SwitchBack " + Branding.Version + " in Revit " + _versionNumber +
                          " (PID " + Process.GetCurrentProcess().Id + ")");
 
                 _handler = new SwitchBackEventHandler();
@@ -67,20 +59,13 @@ namespace ABSwitchBack.Revit
                 _server = new PipeServer(_registry.Self.PipeName, OnMessageReceived);
                 _server.Start();
 
-                BuildRibbon(application);
+                // The AB Adv Tools suite: shared tab and About panel, and a background release
+                // check whose notice waits for a view to activate. The SwitchBack settings
+                // dialog's "Check for updates" switch still turns the automatic check off.
+                try { RevitAdvTools.Initialize(application, Product); }
+                catch (Exception ex) { Log.Warn("AB Adv Tools initialisation failed: " + ex.Message); }
 
-                // Background: never blocks Revit starting. The result is shown later, from
-                // ViewActivated, where a dialog is safe.
-                System.Threading.Tasks.Task.Factory.StartNew(() =>
-                {
-                    UpdateInfo info = UpdateCheck.Check();
-                    if (info != null && info.ShouldNotify)
-                    {
-                        _pendingUpdate = info;
-                        Log.Info("Update available: " + info.LatestVersion +
-                                 " (running " + Branding.Version + ")");
-                    }
-                });
+                BuildRibbon(application);
 
                 // Keep the advertised document name current so the Navisworks picker is useful.
                 try { application.ViewActivated += OnViewActivated; }
@@ -107,6 +92,7 @@ namespace ABSwitchBack.Revit
 
                 try { application.ViewActivated -= OnViewActivated; } catch { }
                 try { application.ControlledApplication.DocumentClosed -= OnDocumentClosed; } catch { }
+                RevitAdvTools.Shutdown(application);
 
                 if (_server != null) { _server.Dispose(); _server = null; }
                 if (_registry != null) { _registry.Dispose(); _registry = null; }
@@ -121,33 +107,31 @@ namespace ABSwitchBack.Revit
         }
 
         /// <summary>
-        /// The update notice waits for this: Revit is idle with a document open, which is a
-        /// safe moment for a dialog. Popping one during OnStartup can stall the splash
-        /// screen or sit behind it unseen.
+        /// AB SwitchBack as the AB Adv Tools suite knows it. Details and the folder button carry what
+        /// SwitchBack's own About dialog showed before it joined the suite.
         /// </summary>
-        private void ShowUpdateNoticeOnce()
+        private static AdvToolsProduct Product
         {
-            UpdateInfo info = _pendingUpdate;
-            if (info == null) return;
-            _pendingUpdate = null;
-
-            try
+            get
             {
-                UpdateCheck.MarkNotified(info.LatestVersion);
-
-                var dialog = new TaskDialog(Branding.ProductName);
-                dialog.MainInstruction = Branding.ProductName + " " + info.LatestVersion + " is available.";
-                dialog.MainContent = "You are running " + Branding.Version + "." + Environment.NewLine +
-                                     Environment.NewLine +
-                                     "You can turn this check off in Settings, on the Navisworks ribbon.";
-                dialog.CommonButtons = TaskDialogCommonButtons.Close;
-                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Open the download page");
-
-                if (dialog.Show() == TaskDialogResult.CommandLink1) UpdateCheck.OpenReleasesPage();
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not show the update notice: " + ex.Message);
+                var product = new AdvToolsProduct(
+                    "SwitchBack",
+                    Branding.ProductName,
+                    Branding.Tagline,
+                    AdvToolsHost.Revit,
+                    Branding.GitHubRepository,
+                    typeof(App).Assembly)
+                {
+                    AutomaticChecksAllowed = delegate { return SwitchBackConfig.Load().CheckForUpdates; },
+                    UpdateSettingsHint = "SwitchBack Settings on the Navisworks ribbon",
+                    Details = delegate
+                    {
+                        return "Ctrl+click an element in Navisworks to select it here, section box it and zoom to it." +
+                               Environment.NewLine + "Settings and logs: " + Paths.Root;
+                    }
+                };
+                product.AddAction("Open the settings and log folder", delegate { Branding.OpenDataFolder(); });
+                return product;
             }
         }
 
@@ -155,8 +139,6 @@ namespace ABSwitchBack.Revit
         {
             try
             {
-                ShowUpdateNoticeOnce();
-
                 if (_registry != null && e.Document != null)
                     _registry.UpdateDocument(e.Document.Title);
             }
@@ -207,15 +189,13 @@ namespace ABSwitchBack.Revit
         {
             try
             {
-                try { application.CreateRibbonTab(TabName); }
-                catch { /* tab already exists */ }
-
-                RibbonPanel panel = application.CreateRibbonPanel(TabName, PanelName);
+                RibbonPanel panel = RevitAdvTools.GetToolPanel(application, PanelName);
                 string asm = Assembly.GetExecutingAssembly().Location;
 
-                // Revit only receives, so its ribbon is deliberately one diagnostic button.
+                // Revit only receives, so its panel is deliberately one diagnostic button.
                 // The trigger gesture and everything else configurable is set from the
-                // Navisworks ribbon, which is where the workflow starts.
+                // Navisworks ribbon, which is where the workflow starts. About, release
+                // checks and LinkedIn live on the suite's shared panel.
                 var status = new PushButtonData(
                     "ABSwitchBackStatus", "Status" + Environment.NewLine + "and Log",
                     asm, typeof(ShowStatusCommand).FullName);
@@ -227,26 +207,6 @@ namespace ABSwitchBack.Revit
                 status.LargeImage = Icons.StatusLarge;
                 status.Image = Icons.StatusSmall;
                 panel.AddItem(status);
-
-                // Author and product identity, matching the other AB add-ins.
-                RibbonPanel aboutPanel = application.CreateRibbonPanel(TabName, AboutPanelName);
-
-                var about = new PushButtonData(
-                    "ABSwitchBackAbout", "About",
-                    asm, typeof(AboutCommand).FullName);
-                about.ToolTip = Branding.AboutLine;
-                about.LargeImage = Icons.LogoLarge;
-                about.Image = Icons.LogoSmall;
-                aboutPanel.AddItem(about);
-
-                var linkedIn = new PushButtonData(
-                    "ABSwitchBackLinkedIn", "LinkedIn",
-                    asm, typeof(LinkedInCommand).FullName);
-                linkedIn.ToolTip = Branding.LinkedInCaption;
-                linkedIn.LongDescription = "Open the author's LinkedIn profile in your browser.";
-                linkedIn.LargeImage = Icons.LinkedInLarge;
-                linkedIn.Image = Icons.LinkedInSmall;
-                aboutPanel.AddItem(linkedIn);
             }
             catch (Exception ex)
             {

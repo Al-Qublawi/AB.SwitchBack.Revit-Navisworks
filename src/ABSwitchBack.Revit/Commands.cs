@@ -99,55 +99,6 @@ namespace ABSwitchBack.Revit
         }
     }
 
-    /// <summary>Product and author identity, with a link out to LinkedIn.</summary>
-    [Transaction(TransactionMode.Manual)]
-    public class AboutCommand : IExternalCommand
-    {
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
-        {
-            try
-            {
-                var dialog = new TaskDialog(Branding.ProductName);
-                dialog.MainInstruction = Branding.ProductName + " " + Branding.Version;
-                dialog.MainContent =
-                    Branding.Tagline + Environment.NewLine + Environment.NewLine +
-                    "Ctrl+click an element in Navisworks to select it here, section box it and zoom to it." +
-                    Environment.NewLine + Environment.NewLine +
-                    "by " + Branding.Author + Environment.NewLine + Environment.NewLine +
-                    "Settings and logs: " + Paths.Root;
-                dialog.CommonButtons = TaskDialogCommonButtons.Close;
-                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, Branding.LinkedInCaption);
-                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Open the settings and log folder");
-
-                TaskDialogResult result = dialog.Show();
-                if (result == TaskDialogResult.CommandLink1) Branding.OpenLinkedIn();
-                else if (result == TaskDialogResult.CommandLink2) Branding.OpenDataFolder();
-
-                return Result.Succeeded;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("AboutCommand failed.", ex);
-                message = ex.Message;
-                return Result.Failed;
-            }
-        }
-    }
-
-    /// <summary>Opens the author's LinkedIn profile.</summary>
-    [Transaction(TransactionMode.Manual)]
-    public class LinkedInCommand : IExternalCommand
-    {
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
-        {
-            if (Branding.OpenLinkedIn()) return Result.Succeeded;
-
-            // Falling back to showing the URL beats failing silently.
-            var dialog = new TaskDialog(Branding.ProductName);
-            dialog.MainInstruction = Branding.LinkedInCaption;
-            dialog.MainContent = Branding.LinkedInUrl;
-            dialog.Show();
-            return Result.Succeeded;
-        }
-    }
+    // About and LinkedIn moved to the AB Adv Tools shared panel (ABAdvTools.Revit), which
+    // every AB add-in shares, so they are not repeated on SwitchBack's own panel.
 }

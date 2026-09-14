@@ -121,36 +121,35 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -RevitYears 2024 -Navis
 ## Installer (share this with the team)
 
 ```bash
-powershell -ExecutionPolicy Bypass -File build\make-msi.ps1
+powershell -ExecutionPolicy Bypass -File build\build.ps1
+powershell -ExecutionPolicy Bypass -File build\make-installer.ps1
 ```
 
-Produces `dist\ABSwitchBack-1.2.0.msi` — one per-machine package covering every release that
-was compiled into `artifacts\`. Requires the WiX 5 CLI once:
-`dotnet tool install --global wix`.
-
-The WiX source is generated from the contents of `artifacts\`, so adding an Autodesk release
-means re-running `build.ps1` then `make-msi.ps1` — never editing XML.
+Produces `dist\AB.SwitchBack.Setup.exe` — one installer covering every Revit and Navisworks
+release compiled into `artifacts\`, built on the AB Adv Tools installer engine
+(`shared\ABAdvTools`). It replaces the 1.x MSI; no WiX is needed. Adding an Autodesk release
+means re-running both scripts — nothing else.
 
 | Host | Destination | Behaviour |
 |---|---|---|
-| Revit | `%ProgramData%\Autodesk\Revit\Addins\<year>\` | Installed for every built year. Revit reads only its own year folder, so one MSI serves a team on mixed versions. |
-| Navisworks | `<install>\Plugins\ABSwitchBack\` | Install path read from the registry at install time; files are skipped entirely when that release is absent. |
+| Revit | `Addins\<year>\` under `%ProgramData%` (all users, default) or `%APPDATA%` | Installed for every built release, whether or not that Revit is installed yet - Revit reads only its own year folder, so one installer serves a team on mixed versions, as the 1.x MSI did. |
+| Navisworks | `<install>\Plugins\ABSwitchBack\` | Install path read from the registry; only releases actually installed. Always needs administrator rights. |
 
-The team member just double-clicks the MSI and accepts the UAC prompt. Uninstall from
-Add/Remove Programs.
+The team member double-clicks it. Setup **finds earlier copies** — the 1.x MSI (by its
+UpgradeCode), files copied by `build\install.ps1`, or an earlier install from this setup —
+lists them, and removes them first unless they are unticked. It asks for administrator
+rights only when the choices need them, restarting itself elevated with the same choices.
+Uninstall from Apps and Features.
 
-> **Coverage:** the package carries every release listed above. Check what it will deploy
-> before sharing:
->
-> ```bash
-> powershell -ExecutionPolicy Bypass -File build\verify-msi.ps1
-> ```
->
-> It prints every file, its exact destination, and the condition gating it.
+Setup never closes Revit or Navisworks for you: it refuses to start while either is running
+and asks you to close them, so nobody loses unsaved work.
 
-The Restart Manager is deliberately disabled in the package: left on, Windows Installer
-offers to shut Revit down to finish the install, which risks losing unsaved work. Instead
-the classic "files in use" prompt asks the user to close the applications and retry.
+```bash
+AB.SwitchBack.Setup.exe /silent                 :: elevated prompt; all users
+AB.SwitchBack.Setup.exe /uninstall /silent
+AB.SwitchBack.Setup.exe /scan                   :: what is installed and where, changes nothing
+AB.SwitchBack.Setup.exe /silent /sandbox:C:\Temp\sb   :: full install into a folder, for testing
+```
 
 ## Install from source (developer machine)
 
@@ -185,9 +184,11 @@ Uninstall with `build\uninstall.ps1` (add `-PurgeSettings` to also drop logs and
 Revit selects the element, applies a section box with a 1 m margin, zooms to it and comes
 forward.
 
-Both applications get an **AB SwitchBack** ribbon tab, with **About** and **LinkedIn**.
+In both applications SwitchBack's buttons are on the **AB Adv Tools** ribbon tab, which every
+AB add-in shares. The tab ends with the suite's **AB Adv Tools** panel: **About** (every AB
+tool loaded, with versions), **Check for Updates** and **LinkedIn**.
 
-Navisworks drives; Revit only receives, so its tab is one diagnostic button:
+Navisworks drives; Revit only receives, so its SwitchBack panel is one diagnostic button:
 
 | Button | Navisworks | Revit |
 |---|---|---|
@@ -251,8 +252,12 @@ CreateViewIfMissing=false
 ## Staying up to date
 
 Both hosts check once a day whether a newer release exists, and tell you **once per
-version** — never again for the same one. Clicking through opens the releases page; the
-MSI upgrades in place.
+version** — never again for the same one. Clicking through opens the release page; the new
+`AB.SwitchBack.Setup.exe` removes the version you have and installs the new one.
+**Check for Updates** on the AB Adv Tools tab checks immediately, for every AB add-in.
+
+Since 1.3.0 this is the AB Adv Tools kit's release checker (`shared\ABAdvTools`), shared by
+every AB add-in; `ABSwitchBack.Core.UpdateCheck` is gone.
 
 Exactly what happens: a single anonymous `GET` to GitHub's public releases API, on a
 background thread. **Nothing is uploaded** — no telemetry, no identifiers, no usage data.
@@ -262,7 +267,8 @@ open and it is idle.
 
 Turn it off with the **Tell me when a newer version is released** checkbox in Settings, or
 `CheckForUpdates=false` in `config.txt` — useful if your clients' IT restricts outbound
-traffic from Revit or Navisworks.
+traffic from Revit or Navisworks. The checkbox in **AB Adv Tools › About** turns it off for
+every AB add-in at once.
 
 ## Configuration
 

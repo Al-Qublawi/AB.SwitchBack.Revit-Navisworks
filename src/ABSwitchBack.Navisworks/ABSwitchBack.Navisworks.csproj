@@ -75,10 +75,14 @@
              LinkBase="Core" />
   </ItemGroup>
 
-  <!-- Core uses HttpClient for the update check; net48 needs it referenced explicitly. -->
-  <ItemGroup>
-    <Reference Include="System.Net.Http" />
-  </ItemGroup>
+  <!--
+    AB Adv Tools suite: the shared ribbon tab, About / Check for Updates / LinkedIn panel and
+    GitHub release notifications. Compiled in, like Core and for the same reason.
+  -->
+  <PropertyGroup>
+    <ABAdvToolsRibbonXaml>$(MSBuildProjectDirectory)\ABSwitchBack.xaml</ABAdvToolsRibbonXaml>
+  </PropertyGroup>
+  <Import Project="$(RepoRoot)shared\ABAdvTools\build\ABAdvTools.Navisworks.targets" />
 
   <!-- Lets the running plugin report which release it was compiled against. -->
   <ItemGroup>
@@ -110,12 +114,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="$(RepoRoot)assets\status_32.ico" Link="Images\status_32.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="$(RepoRoot)assets\linkedin_16.ico" Link="Images\linkedin_16.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="$(RepoRoot)assets\linkedin_32.ico" Link="Images\linkedin_32.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

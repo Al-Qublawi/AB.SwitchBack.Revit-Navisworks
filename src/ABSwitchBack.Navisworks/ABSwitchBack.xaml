@@ -14,8 +14,11 @@
     LargeIcon named on each [Command] attribute relative to the plugin DLL, which
     avoids the path ambiguity that Image="..\Images\..." introduces once localised
     XAML subfolders exist.
+
+    The tab is the shared AB Adv Tools tab: every AB plugin declares it with this Id and
+    title, and the kit folds them into one tab at startup (shared\ABAdvTools).
   -->
-  <RibbonTab Id="ID_ABSBTab" Title="AB SwitchBack" KeyTip="AS">
+  <RibbonTab Id="ID_ABAdvTools" Title="AB Adv Tools" KeyTip="AB">
 
     <!-- Brand entry point: choose the Revit session that receives the elements. -->
     <RibbonPanel x:Uid="ABSB_Panel_Target">
@@ -42,21 +45,32 @@
       </RibbonPanelSource>
     </RibbonPanel>
 
-    <!-- Author identity, matching the other AB add-ins. -->
-    <RibbonPanel x:Uid="ABSB_Panel_About">
-      <RibbonPanelSource x:Uid="ABSB_Source_About" KeyTip="AB" Title="About">
+    <!-- BEGIN AB ADV TOOLS SHARED PANEL - kept identical in every AB plugin by sync-kit.ps1; do not edit here -->
+    <!--
+      Every AB plugin carries this panel. At runtime NavisworksRibbonMerger keeps exactly one,
+      last on the AB Adv Tools tab; its buttons are handled by NavisworksAdvTools, so whichever
+      plugin's copy survives behaves the same. The Id on RibbonPanelSource is how it is found.
+    -->
+    <RibbonPanel x:Uid="ABADV_Panel_Shared">
+      <RibbonPanelSource x:Uid="ABADV_Source_Shared" Id="ABADV_SharedPanel" KeyTip="AV" Title="AB Adv Tools">
 
-        <RibbonRowPanel x:Uid="ABSB_Row_About">
+        <local:NWRibbonButton x:Uid="ABADV_About" Id="ID_ABADV_About"
+                              Size="Large"
+                              KeyTip="AA"
+                              ShowText="True"
+                              Orientation="Vertical" />
 
-          <local:NWRibbonButton x:Uid="ABSB_About" Id="ID_ABSB_About"
-                                KeyTip="AT"
+        <RibbonRowPanel x:Uid="ABADV_Row_Shared">
+
+          <local:NWRibbonButton x:Uid="ABADV_Updates" Id="ID_ABADV_Updates"
+                                KeyTip="AU"
                                 ShowText="True"
                                 Orientation="Horizontal" />
 
-          <RibbonRowBreak x:Uid="ABSB_Break_1" />
+          <RibbonRowBreak x:Uid="ABADV_Break_Shared" />
 
-          <local:NWRibbonButton x:Uid="ABSB_LinkedIn" Id="ID_ABSB_LinkedIn"
-                                KeyTip="LI"
+          <local:NWRibbonButton x:Uid="ABADV_LinkedIn" Id="ID_ABADV_LinkedIn"
+                                KeyTip="AL"
                                 ShowText="True"
                                 Orientation="Horizontal" />
 
@@ -64,6 +78,7 @@
 
       </RibbonPanelSource>
     </RibbonPanel>
+    <!-- END AB ADV TOOLS SHARED PANEL -->
 
   </RibbonTab>
 

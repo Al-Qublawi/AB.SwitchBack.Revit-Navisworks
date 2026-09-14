@@ -29,15 +29,14 @@ namespace ABSwitchBack.SelfTest
             // Live network probe, kept out of the suite so it can never fail a build offline.
             if (args != null && Array.IndexOf(args, "--updatecheck") >= 0)
             {
-                Console.WriteLine("Running version : " + Branding.Version);
-                string tag = UpdateCheck.FetchLatestTag();
-                Console.WriteLine("Latest on GitHub: " + (tag ?? "(unreachable)"));
-                if (!string.IsNullOrEmpty(tag))
-                {
-                    int cmp = UpdateCheck.Compare(tag, Branding.Version);
-                    Console.WriteLine("Verdict         : " +
-                        (cmp > 0 ? "update available" : cmp == 0 ? "up to date" : "running newer than released"));
-                }
+                var product = new ABAdvTools.AdvToolsProduct("SwitchBack", Branding.ProductName, Branding.Tagline,
+                    ABAdvTools.AdvToolsHost.Revit, Branding.GitHubRepository, typeof(Branding).Assembly);
+
+                ABAdvTools.UpdateResult result = ABAdvTools.UpdateChecker.CheckNow(product);
+                Console.WriteLine("Running version : " + product.Version);
+                Console.WriteLine("Latest on GitHub: " + (result.LatestVersion ?? "(unreachable: " + result.Detail + ")"));
+                Console.WriteLine("Verdict         : " + result.StatusText);
+                Console.WriteLine("Release page    : " + result.ReleaseUrl);
                 return 0;
             }
 
@@ -685,41 +684,54 @@ namespace ABSwitchBack.SelfTest
         /// </summary>
         private static void TestUpdateCheck()
         {
-            Check("newer patch is detected", UpdateCheck.Compare("1.1.1", "1.1.0") > 0);
-            Check("newer minor is detected", UpdateCheck.Compare("1.2.0", "1.1.9") > 0);
-            Check("newer major is detected", UpdateCheck.Compare("2.0.0", "1.9.9") > 0);
-            Check("same version is not newer", UpdateCheck.Compare("1.2.0", "1.2.0") == 0);
-            Check("older version is not newer", UpdateCheck.Compare("1.1.0", "1.2.0") < 0);
+            Check("newer patch is detected", ABAdvTools.UpdateChecker.Compare("1.1.1", "1.1.0") > 0);
+            Check("newer minor is detected", ABAdvTools.UpdateChecker.Compare("1.2.0", "1.1.9") > 0);
+            Check("newer major is detected", ABAdvTools.UpdateChecker.Compare("2.0.0", "1.9.9") > 0);
+            Check("same version is not newer", ABAdvTools.UpdateChecker.Compare("1.2.0", "1.2.0") == 0);
+            Check("older version is not newer", ABAdvTools.UpdateChecker.Compare("1.1.0", "1.2.0") < 0);
 
             // Numeric, not lexical: "1.10.0" must beat "1.9.0".
-            Check("double-digit parts compare numerically", UpdateCheck.Compare("1.10.0", "1.9.0") > 0);
-            Check("double-digit majors compare numerically", UpdateCheck.Compare("10.0.0", "9.0.0") > 0);
+            Check("double-digit parts compare numerically", ABAdvTools.UpdateChecker.Compare("1.10.0", "1.9.0") > 0);
+            Check("double-digit majors compare numerically", ABAdvTools.UpdateChecker.Compare("10.0.0", "9.0.0") > 0);
 
             // GitHub tags carry a leading v.
-            Check("a v prefix is ignored", UpdateCheck.Compare("v1.2.0", "1.2.0") == 0);
-            Check("normalise strips the v", UpdateCheck.Normalise("v1.2.0") == "1.2.0");
-            Check("normalise leaves a bare version", UpdateCheck.Normalise("1.2.0") == "1.2.0");
+            Check("a v prefix is ignored", ABAdvTools.UpdateChecker.Compare("v1.2.0", "1.2.0") == 0);
+            Check("normalise strips the v", ABAdvTools.UpdateChecker.Normalise("v1.2.0") == "1.2.0");
+            Check("normalise leaves a bare version", ABAdvTools.UpdateChecker.Normalise("1.2.0") == "1.2.0");
 
             // Shorter and pre-release forms must not throw or mis-rank.
-            Check("missing parts count as zero", UpdateCheck.Compare("1.2", "1.2.0") == 0);
-            Check("pre-release suffix is tolerated", UpdateCheck.Compare("1.2.0-beta", "1.2.0") == 0);
-            Check("garbage does not throw", UpdateCheck.Compare("", "1.0.0") < 0);
+            Check("missing parts count as zero", ABAdvTools.UpdateChecker.Compare("1.2", "1.2.0") == 0);
+            Check("pre-release suffix is tolerated", ABAdvTools.UpdateChecker.Compare("1.2.0-beta", "1.2.0") == 0);
+            Check("garbage does not throw", ABAdvTools.UpdateChecker.Compare("", "1.0.0") < 0);
 
             // Extracting tag_name from a releases response.
             string json = "{\"url\":\"https://x\",\"tag_name\":\"v1.2.0\",\"name\":\"AB SwitchBack 1.2.0\"}";
-            Check("tag_name is extracted", UpdateCheck.ExtractJsonString(json, "tag_name") == "v1.2.0");
+            Check("tag_name is extracted", ABAdvTools.UpdateChecker.ExtractJsonString(json, "tag_name") == "v1.2.0");
             Check("a different field is extracted",
-                  UpdateCheck.ExtractJsonString(json, "name") == "AB SwitchBack 1.2.0");
+                  ABAdvTools.UpdateChecker.ExtractJsonString(json, "name") == "AB SwitchBack 1.2.0");
             Check("a missing field returns null",
-                  UpdateCheck.ExtractJsonString(json, "nothing_here") == null);
-            Check("malformed json returns null", UpdateCheck.ExtractJsonString("not json", "tag_name") == null);
-            Check("empty input returns null", UpdateCheck.ExtractJsonString("", "tag_name") == null);
+                  ABAdvTools.UpdateChecker.ExtractJsonString(json, "nothing_here") == null);
+            Check("malformed json returns null", ABAdvTools.UpdateChecker.ExtractJsonString("not json", "tag_name") == null);
+            Check("empty input returns null", ABAdvTools.UpdateChecker.ExtractJsonString("", "tag_name") == null);
 
             // The check is on by default, and must be switchable off.
             var config = new SwitchBackConfig();
             Check("update check is on by default", config.CheckForUpdates);
             config.CheckForUpdates = false;
             Check("update check can be turned off", !config.CheckForUpdates);
+
+            // The version the checker compares against comes from the build, not a constant.
+            string built = typeof(Branding).Assembly.GetName().Version.ToString(3);
+            Check("Branding.Version matches the compiled assembly", Branding.Version == built);
+
+            // With the SwitchBack switch off, the suite's automatic check does nothing.
+            var gated = new ABAdvTools.AdvToolsProduct("SwitchBackSelfTest", Branding.ProductName, Branding.Tagline,
+                ABAdvTools.AdvToolsHost.Revit, Branding.GitHubRepository, typeof(Branding).Assembly)
+            {
+                AutomaticChecksAllowed = delegate { return false; }
+            };
+            Check("the Settings switch gates the automatic release check",
+                  ABAdvTools.UpdateChecker.CheckAutomatically(gated) == null);
         }
 
         // ------------------------------------------------------------------ helpers

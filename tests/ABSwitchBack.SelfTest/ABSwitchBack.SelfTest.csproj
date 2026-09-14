@@ -19,4 +19,10 @@
     <ProjectReference Include="..\..\src\ABSwitchBack.Core\ABSwitchBack.Core.csproj" />
   </ItemGroup>
 
+  <!-- The release checker lives in the AB Adv Tools kit; test the same source the add-ins compile. -->
+  <ItemGroup>
+    <Compile Include="$(RepoRoot)shared\ABAdvTools\src\Common\**\*.cs" LinkBase="ABAdvTools\Common" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
 </Project>

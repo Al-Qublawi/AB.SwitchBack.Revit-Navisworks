@@ -15,8 +15,8 @@
     <InternalsVisibleTo Include="ABSwitchBack.SelfTest" />
   </ItemGroup>
 
-  <!-- HttpClient needs an explicit reference on .NET Framework; it is built in on .NET 8. -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-    <Reference Include="System.Net.Http" />
-  </ItemGroup>
+  <!--
+    No HTTP here any more: release checks moved to the AB Adv Tools kit, which is compiled
+    into the Revit add-in and the Navisworks plugin (shared\ABAdvTools).
+  -->
 </Project>

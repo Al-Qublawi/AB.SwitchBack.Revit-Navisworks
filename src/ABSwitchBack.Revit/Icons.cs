@@ -13,12 +13,9 @@ namespace ABSwitchBack.Revit
     {
         private const string Prefix = "ABSwitchBack.Revit.Resources.";
 
-        public static BitmapSource LogoSmall { get { return LoadPng(Prefix + "logo_16.png"); } }
-        public static BitmapSource LogoLarge { get { return LoadPng(Prefix + "logo_32.png"); } }
+        // The About and LinkedIn images belong to the AB Adv Tools shared panel now.
         public static BitmapSource StatusSmall { get { return LoadPng(Prefix + "status_16.png"); } }
         public static BitmapSource StatusLarge { get { return LoadPng(Prefix + "status_32.png"); } }
-        public static BitmapSource LinkedInSmall { get { return LoadIcon(Prefix + "linkedin_16.ico"); } }
-        public static BitmapSource LinkedInLarge { get { return LoadIcon(Prefix + "linkedin_32.ico"); } }
 
         /// <summary>WPF decodes PNG natively, so the logo needs no .ico conversion.</summary>
         private static BitmapSource LoadPng(string resourceName)

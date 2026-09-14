@@ -10,8 +10,30 @@ namespace ABSwitchBack.Core
         public const string LinkedInUrl = "https://www.linkedin.com/in/abdullahalqublawi/";
         public const string LinkedInCaption = "Abdullah Lotfy - LinkedIn";
         public const string ProductName = "AB SwitchBack";
-        public const string Version = "1.2.0";
         public const string Tagline = "Navisworks to Revit switch back";
+
+        /// <summary>Where releases are published, and where installed copies look for new ones.</summary>
+        public const string GitHubRepository = "AB.SwitchBack.Revit-Navisworks";
+
+        /// <summary>
+        /// Read from the compiled assembly (Directory.Build.props), never a hand-kept constant:
+        /// a constant that drifts from the build makes every update check misreport.
+        /// </summary>
+        public static string Version
+        {
+            get
+            {
+                try
+                {
+                    System.Version v = typeof(Branding).Assembly.GetName().Version;
+                    return v == null ? "0.0.0" : v.ToString(3);
+                }
+                catch
+                {
+                    return "0.0.0";
+                }
+            }
+        }
 
         public static string AboutLine
         {

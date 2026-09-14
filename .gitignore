@@ -30,3 +30,7 @@ obj/
 
 # ---- promo / marketing assets (not part of the product) ----
 .promo/
+
+# ---- installer staging -------------------------------------------------
+# build\make-installer.ps1 regenerates the payload zips from artifacts\.
+installer/ABSwitchBack.Setup/payload/
