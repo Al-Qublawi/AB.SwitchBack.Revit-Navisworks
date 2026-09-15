@@ -5,7 +5,7 @@ bin/
 obj/
 *.pdb
 
-# The generated WiX source and the .msi are rebuilt by build\make-msi.ps1;
+# The .msi is rebuilt by build\make-installer.ps1 (staging and WiX source under obj\msi);
 # the installer ships as a GitHub release asset, not in the tree.
 *.msi
 *.wixpdb
@@ -31,6 +31,3 @@ obj/
 # ---- promo / marketing assets (not part of the product) ----
 .promo/
 
-# ---- installer staging -------------------------------------------------
-# build\make-installer.ps1 regenerates the payload zips from artifacts\.
-installer/ABSwitchBack.Setup/payload/

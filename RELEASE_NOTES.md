@@ -1,7 +1,33 @@
-# AB SwitchBack 1.3.0
+# AB SwitchBack 1.3.1
 
 Ctrl+click an element in Navisworks and the paired Revit session selects it, section boxes it and
 zooms to it. Revit 2020 – 2026, Navisworks 2024 – 2027.
+
+## The installer is an .msi again: `AB.SwitchBack-1.3.1.msi`
+
+1.3.0's `AB.SwitchBack.Setup.exe` was blocked on company PCs by Microsoft Defender's attack surface
+reduction rule *"Block executable files from running unless they meet a prevalence, age, or trusted
+list criteria"*. That rule stops unknown programs; it does not stop Windows Installer packages, and
+the new package runs no program of its own. Nothing in SwitchBack itself changed.
+
+Everything 1.3.0's installer offered is still there:
+
+- **Install for** Everyone (the default) or Only me. Navisworks has no per-user plugin folder, so
+  its plugin installs with Everyone.
+- **Choose releases** — every Revit year is ticked, installed or not, so the add-in is ready when
+  that Revit is; the Navisworks plugin is offered for each Navisworks edition installed. The ticks
+  are remembered for the next upgrade.
+- **Earlier versions** — a copy installed by 1.3.0's `Setup.exe` is listed and removed first unless
+  you untick it; the 1.0 – 1.2 packages are upgraded in place.
+- Revit and Navisworks are never closed for you: if they hold SwitchBack's files, Windows asks you
+  to close them.
+- Silent deployment with standard `msiexec` options — see the README.
+
+If Setup.exe 1.3.0 is installed, just run the .msi: it replaces it.
+
+---
+
+# AB SwitchBack 1.3.0
 
 ## What's new
 
