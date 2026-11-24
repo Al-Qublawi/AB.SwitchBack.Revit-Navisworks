@@ -15,8 +15,10 @@
 #>
 [CmdletBinding()]
 param(
-    [int[]]$RevitYears,
-    [int[]]$NavisYears,
+    # Release years. A string is split on commas too: started with  powershell -File , the list
+    # "2024,2026" arrives as one string (AB MEP Supports once built "Revit 20242026" that way).
+    [string[]]$RevitYears,
+    [string[]]$NavisYears,
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [switch]$Clean,
@@ -24,14 +26,34 @@ param(
     # Build against the SDKs installed on this machine rather than the NuGet reference
     # assemblies. Not the default: an Autodesk update can change a local SDK in place, so
     # the result depends on when the build ran.
-    [switch]$UseInstalledSdk
+    [switch]$UseInstalledSdk,
+
+    # The Autodesk Marketplace build (STORE_BUILD): no GitHub release check and no update UI.
+    # Output goes to artifacts\store. build\make-bundle.ps1 passes this.
+    [switch]$StoreBuild
 )
+
+function Split-Years([string[]]$Years) {
+    @($Years | ForEach-Object { "$_" -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } | ForEach-Object {
+        if ($_ -notmatch '^\d{4}$') { throw "'$_' is not a release year." }
+        [int]$_
+    })
+}
+$RevitYears = Split-Years $RevitYears
+$NavisYears = Split-Years $NavisYears
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 
 $repoRoot  = Split-Path $PSScriptRoot -Parent
 $artifacts = Join-Path $repoRoot 'artifacts'
+if ($StoreBuild) { $artifacts = Join-Path $artifacts 'store' }
+
+# Common to every target: the store switch, and on Linux/macOS the Windows targeting packs
+# (WPF and WinForms compile anywhere with them; the add-ins still only run on Windows).
+$commonArguments = @()
+if ($StoreBuild) { $commonArguments += '-p:StoreBuild=true' }
+if ($PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) { $commonArguments += '-p:EnableWindowsTargeting=true' }
 
 if ($Clean -and (Test-Path $artifacts)) {
     Write-Host "Cleaning $artifacts"
@@ -67,7 +89,7 @@ foreach ($year in $revitTargets) {
     Write-Host "  Revit $year ... " -NoNewline
 
     $project = Join-Path $repoRoot 'src\ABSwitchBack.Revit\ABSwitchBack.Revit.csproj'
-    $arguments = @($project, '-c', $Configuration, '-v', 'quiet', '--nologo', "-p:RevitVersion=$year")
+    $arguments = @($project, '-c', $Configuration, '-v', 'quiet', '--nologo', "-p:RevitVersion=$year") + $commonArguments
 
     if ($UseInstalledSdk) {
         $local = Get-RevitInstallPath -Year $year
@@ -100,7 +122,7 @@ foreach ($year in $navisTargets) {
     Write-Host "  Navisworks $year ... " -NoNewline
 
     $project = Join-Path $repoRoot 'src\ABSwitchBack.Navisworks\ABSwitchBack.Navisworks.csproj'
-    $arguments = @($project, '-c', $Configuration, '-v', 'quiet', '--nologo', "-p:NavisVersion=$year")
+    $arguments = @($project, '-c', $Configuration, '-v', 'quiet', '--nologo', "-p:NavisVersion=$year") + $commonArguments
 
     if ($UseInstalledSdk) {
         $local = Get-NavisworksInstallPath -Year $year -Product 'Manage'

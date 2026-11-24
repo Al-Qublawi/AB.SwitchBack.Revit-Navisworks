@@ -30,6 +30,13 @@
     <ArtifactsDir Condition="'$(StoreBuild)' == 'true'">$(RepoRoot)artifacts\store\</ArtifactsDir>
     <_StoreObj Condition="'$(StoreBuild)' == 'true'">store\</_StoreObj>
   </PropertyGroup>
+  <!-- Stamped into every store-build assembly; build\make-bundle.ps1 refuses a DLL without it. -->
+  <ItemGroup Condition="'$(StoreBuild)' == 'true'">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ABStoreBuild</_Parameter1>
+      <_Parameter2>true</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
   <PropertyGroup Condition="'$(StoreBuild)' == 'true'">
     <DefineConstants>$(DefineConstants);STORE_BUILD</DefineConstants>
     <!-- Core has no OutputPath of its own; keep its store build out of the normal bin folder. -->

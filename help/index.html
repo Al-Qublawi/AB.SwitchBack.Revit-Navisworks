@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AB SwitchBack - User Guide</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div>
+  <h1>AB SwitchBack - User Guide</h1>
+  <p>Navisworks to Revit switch back &middot; by Abdullah Lotfy &middot; Revit 2020-2027 and Navisworks 2024-2027</p>
+</div></header>
+<main>
+
+<nav>
+  <a href="#start">Getting started</a>
+  <a href="#buttons">Buttons</a>
+  <a href="#settings">Settings</a>
+  <a href="#model">What it changes</a>
+  <a href="#ids">Element ids</a>
+  <a href="#trouble">Troubleshooting</a>
+  <a href="#support">Support</a>
+  <a href="privacy.html">Privacy</a>
+</nav>
+
+<p>Hold <kbd>Ctrl</kbd> and click an element in Navisworks. The Revit session it belongs to selects that
+element, opens a 3D view, wraps a section box around it, zooms to it and comes to the front. It is made for
+coordination reviews: find a clash in Navisworks, fix it in Revit, without searching for the element.</p>
+
+<p class="note">SwitchBack has two halves and needs both: the Revit add-in and the Navisworks plugin. The
+Marketplace package installs both. Revit and Navisworks talk to each other on the same computer only; nothing
+leaves it.</p>
+
+<h2 id="start">Getting started</h2>
+<ol>
+  <li>Open the Revit project the Navisworks model was exported from.</li>
+  <li>Open the model in Navisworks. Both sides start listening automatically.</li>
+  <li>When more than one Revit is running: in Navisworks, <b>AB Adv Tools</b> tab &gt; <b>SwitchBack</b> &gt;
+    <b>Revit Target</b>, and choose the Revit that should receive the elements. With one Revit running it
+    pairs by itself.</li>
+  <li>Hold <kbd>Ctrl</kbd> and left-click an element in Navisworks.</li>
+</ol>
+<p>Revit selects the element in the <b>active</b> project, applies a section box with a 1 m margin, zooms
+to it and comes forward.</p>
+
+<h3>Why Ctrl+Click and not Ctrl+Shift+Click</h3>
+<p>Navisworks reserves Ctrl+Shift+Click: it expands the pick to the whole model file, so no single element
+can be found. Shift is therefore never part of the gesture, and a click with Shift held does nothing.</p>
+
+<h2 id="buttons">Buttons</h2>
+<p>In both applications SwitchBack is on the <b>AB Adv Tools</b> ribbon tab. Navisworks drives; Revit only
+receives, so the Revit panel is for checking the connection.</p>
+<table>
+  <tr><th>Button</th><th>Navisworks</th><th>Revit</th></tr>
+  <tr><td><b>Revit Target</b></td><td>Choose which running Revit receives the elements you click.</td><td>-</td></tr>
+  <tr><td><b>Settings</b></td><td>The trigger gesture, on/off, and what Revit does with an element.</td><td>-</td></tr>
+  <tr><td><b>Status and Log</b></td><td>Listener and trigger state; opens the log folder.</td><td>Listener state, the settings in force, the running Navisworks sessions with a connection test, and the log folder.</td></tr>
+  <tr><td><b>Help</b></td><td colspan="2">Opens this guide. <kbd>F1</kbd> over a SwitchBack button in Revit opens it too.</td></tr>
+</table>
+
+<h2 id="settings">Settings</h2>
+<p>Everything is set from <b>Settings</b> on the Navisworks ribbon. Changes apply immediately; nothing needs
+restarting.</p>
+<table>
+  <tr><th>Setting</th><th>Default</th><th>What it does</th></tr>
+  <tr><td>Enable the trigger</td><td>On</td><td>Off stops Navisworks sending anything to Revit.</td></tr>
+  <tr><td>Keys held while clicking</td><td>Ctrl</td><td><b>Ctrl</b>, <b>Alt</b> or <b>Ctrl+Alt</b>. With neither ticked, every element you select is sent - useful for a dedicated review session, noisy otherwise.</td></tr>
+  <tr><td>Create a section box</td><td>On</td><td>Off: Revit only selects and zooms.</td></tr>
+  <tr><td>Section box margin</td><td>1000 mm</td><td>Space left around the element inside the section box.</td></tr>
+  <tr><td>Create a 3D view if none is usable</td><td>On</td><td>Off: Revit never creates a view.</td></tr>
+</table>
+<p>The settings are kept in <code>%LOCALAPPDATA%\ABSwitchBack\config.txt</code>, shared by Revit and
+Navisworks.</p>
+
+<h2 id="model">What it changes in your model</h2>
+<p>Two view-level changes, each in its own named transaction, so <kbd>Ctrl+Z</kbd> reverses them:</p>
+<table>
+  <tr><th>Change</th><th>When</th></tr>
+  <tr><td>Section box on the 3D view</td><td>Every switch back (unless switched off)</td></tr>
+  <tr><td>A new 3D view</td><td>Only when the project has no usable 3D view (unless switched off)</td></tr>
+</table>
+<p>Nothing else is touched: no geometry, parameters, families, types, worksets, levels or deletions.
+Switch both options off and SwitchBack is strictly read-only. In a workshared model, if another user owns the
+3D view, the section box is skipped and the element is still selected and zoomed.</p>
+
+<h2 id="ids">How the Revit element is found</h2>
+<p>SwitchBack reads the Revit element id that the Navisworks export stored on the clicked item, or on one of
+its parents: a property tab named <i>Element ID</i>, <i>Revit Element ID</i> or <i>Revit ID</i>, or a property
+with one of those names. Only the <b>active</b> Revit document is searched; linked models are ignored, because
+an id from a link would point at a different element in the host model.</p>
+
+<h2 id="trouble">Troubleshooting</h2>
+<table>
+  <tr><th>What you see</th><th>What it usually is</th></tr>
+  <tr><td>"The click selected the whole model file"</td><td>Navisworks' Selection Resolution is set to File. Set it to First Object or Geometry in Options &gt; Interface &gt; Selection.</td></tr>
+  <tr><td>Nothing happens on Ctrl+Click</td><td>The trigger is off, or a different key is set - see <b>Status and Log</b> in Navisworks. Shift must not be held.</td></tr>
+  <tr><td>"No Revit instance found"</td><td>Revit is not running, or SwitchBack did not load in Revit - look for the AB Adv Tools tab there.</td></tr>
+  <tr><td>"Element not found in the active project"</td><td>The Navisworks model came from a different project, another project is active in Revit, or the element is in a linked model.</td></tr>
+  <tr><td>No element id found</td><td>The model was exported without Revit ids. The message lists the property tabs the item does have.</td></tr>
+  <tr><td>SwitchBack loads twice, or Revit reports a duplicate add-in</td><td>The publisher's own installer (from GitHub) is also installed. Keep one: uninstall either it or the Marketplace version.</td></tr>
+</table>
+<p>Logs: <code>%LOCALAPPDATA%\ABSwitchBack\logs</code>, one file per Revit or Navisworks session
+(<b>Status and Log</b> opens the folder).</p>
+
+<h2 id="support">Support</h2>
+<p>E-mail <a href="mailto:abdullah.mech93@gmail.com">abdullah.mech93@gmail.com</a> with your Revit and
+Navisworks versions, the SwitchBack version, what you did and what happened, and the log files from the folder
+above.</p>
+<p>Uninstalling: Windows Settings &gt; Apps (or the Autodesk App Store's uninstall). Your models are not
+affected. The settings and logs in <code>%LOCALAPPDATA%\ABSwitchBack</code> and
+<code>%LOCALAPPDATA%\AB Adv Tools</code> may be deleted at any time.</p>
+<p><a href="privacy.html">Privacy policy</a> &middot; <a href="LICENSE.txt">Licence (MIT)</a></p>
+
+<footer>AB SwitchBack &middot; &copy; 2026 Abdullah Lotfy</footer>
+</main>
+</body>
+</html>
