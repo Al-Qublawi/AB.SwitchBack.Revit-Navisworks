@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace ABSwitchBack.Core
 {
@@ -14,6 +15,23 @@ namespace ABSwitchBack.Core
 
         /// <summary>Where releases are published, and where installed copies look for new ones.</summary>
         public const string GitHubRepository = "AB.SwitchBack.Revit-Navisworks";
+
+        /// <summary>The project page, opened by Help when no user guide is installed beside the add-in.</summary>
+        public const string ProjectUrl = "https://github.com/Al-Qublawi/" + GitHubRepository;
+
+#if STORE_BUILD
+        /// <summary>
+        /// True in the Autodesk Marketplace build (-p:StoreBuild=true). The store forbids an app
+        /// carrying its own update mechanism, so that build never contacts GitHub.
+        /// </summary>
+        public const bool IsStoreBuild = true;
+
+        /// <summary>The repository the release check asks; none in a store build.</summary>
+        public const string ReleaseRepository = null;
+#else
+        public const bool IsStoreBuild = false;
+        public const string ReleaseRepository = GitHubRepository;
+#endif
 
         /// <summary>
         /// Read from the compiled assembly (Directory.Build.props), never a hand-kept constant:
@@ -59,6 +77,51 @@ namespace ABSwitchBack.Core
             catch (Exception ex)
             {
                 Log.Warn("Could not open LinkedIn: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// A page of the user guide shipped with the add-in, or null. The Marketplace bundle keeps it in
+        /// Contents\Resources\Help, two folders above each host's binaries (Contents\Revit\2027,
+        /// Contents\Navisworks\v24); a Help folder beside the binaries is accepted too.
+        /// </summary>
+        public static string ShippedHelpPage(string name)
+        {
+            try
+            {
+                string folder = Path.GetDirectoryName(typeof(Branding).Assembly.Location) ?? string.Empty;
+                foreach (string candidate in new[]
+                {
+                    Path.Combine(folder, "Help", name),
+                    Path.Combine(folder, "..", "..", "Resources", "Help", name),
+                    Path.Combine(folder, "..", "Resources", "Help", name)
+                })
+                {
+                    if (File.Exists(candidate)) return Path.GetFullPath(candidate);
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>The user guide (F1 help), or null when none is installed.</summary>
+        public static string HelpFile { get { return ShippedHelpPage("index.html"); } }
+
+        /// <summary>Opens the installed user guide, or the project page when none is installed.</summary>
+        public static bool OpenHelp()
+        {
+            string target = HelpFile ?? ProjectUrl;
+            try
+            {
+                var info = new ProcessStartInfo(target);
+                info.UseShellExecute = true;
+                Process.Start(info);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not open help (" + target + "): " + ex.Message);
                 return false;
             }
         }

@@ -62,6 +62,7 @@ namespace ABSwitchBack.Revit
                 // The AB Adv Tools suite: shared tab and About panel, and a background release
                 // check whose notice waits for a view to activate. The SwitchBack settings
                 // dialog's "Check for updates" switch still turns the automatic check off.
+                // A store build has neither the panel nor the check (see Product).
                 try { RevitAdvTools.Initialize(application, Product); }
                 catch (Exception ex) { Log.Warn("AB Adv Tools initialisation failed: " + ex.Message); }
 
@@ -119,10 +120,15 @@ namespace ABSwitchBack.Revit
                     Branding.ProductName,
                     Branding.Tagline,
                     AdvToolsHost.Revit,
-                    Branding.GitHubRepository,
+                    Branding.ReleaseRepository,
                     typeof(App).Assembly)
                 {
-                    AutomaticChecksAllowed = delegate { return SwitchBackConfig.Load().CheckForUpdates; },
+                    AutomaticChecksAllowed = delegate { return !Branding.IsStoreBuild && SwitchBackConfig.Load().CheckForUpdates; },
+
+                    // The Marketplace forbids an app's own update mechanism: a store build has no
+                    // release channel and does not build the shared panel with its Check for Updates
+                    // button. Another AB tool installed beside it still builds that panel.
+                    BuildsSharedPanel = !Branding.IsStoreBuild,
                     UpdateSettingsHint = "SwitchBack Settings on the Navisworks ribbon",
                     Details = delegate
                     {
@@ -206,12 +212,30 @@ namespace ABSwitchBack.Revit
                     "loaded so the connection can be tested.";
                 status.LargeImage = Icons.StatusLarge;
                 status.Image = Icons.StatusSmall;
-                panel.AddItem(status);
+                AddHelp(panel.AddItem(status));
+
+                var help = new PushButtonData(
+                    "ABSwitchBackHelp", "Help",
+                    asm, typeof(ShowHelpCommand).FullName);
+                help.ToolTip = "Open the AB SwitchBack user guide.";
+                help.AvailabilityClassName = typeof(AlwaysAvailable).FullName;
+                help.LargeImage = RevitAdvTools.LoadPng("abadv_about_32.png");
+                help.Image = RevitAdvTools.LoadPng("abadv_about_16.png");
+                AddHelp(panel.AddItem(help));
             }
             catch (Exception ex)
             {
                 Log.Error("Could not build the ribbon.", ex);
             }
+        }
+
+        /// <summary>F1 on a SwitchBack button opens the installed user guide, when there is one.</summary>
+        private static void AddHelp(RibbonItem item)
+        {
+            string page = Branding.HelpFile;
+            if (item == null || page == null) return;
+            try { item.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, new Uri(page).AbsoluteUri)); }
+            catch (Exception ex) { Log.Warn("Contextual help not set: " + ex.Message); }
         }
     }
 }

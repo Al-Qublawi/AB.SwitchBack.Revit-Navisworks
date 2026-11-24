@@ -18,6 +18,25 @@
   </PropertyGroup>
 
   <!--
+    Autodesk Marketplace build: dotnet build -p:StoreBuild=true (build\make-bundle.ps1 passes it).
+    The store forbids an app carrying its own update mechanism, so a store build defines
+    STORE_BUILD, which leaves out the GitHub release check, the shared AB Adv Tools panel (its
+    Check for Updates button) and every setting about updates. Its output and intermediate files
+    go to their own folders, so a store build never mixes with the GitHub/.msi build.
+  -->
+  <PropertyGroup>
+    <StoreBuild Condition="'$(StoreBuild)' == ''">false</StoreBuild>
+    <ArtifactsDir>$(RepoRoot)artifacts\</ArtifactsDir>
+    <ArtifactsDir Condition="'$(StoreBuild)' == 'true'">$(RepoRoot)artifacts\store\</ArtifactsDir>
+    <_StoreObj Condition="'$(StoreBuild)' == 'true'">store\</_StoreObj>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(StoreBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);STORE_BUILD</DefineConstants>
+    <!-- Core has no OutputPath of its own; keep its store build out of the normal bin folder. -->
+    <BaseOutputPath>$(MSBuildProjectDirectory)\bin\store\</BaseOutputPath>
+  </PropertyGroup>
+
+  <!--
     The same project is built once per Autodesk release, so each version needs its own
     intermediate folder. This MUST be set here: Microsoft.Common.props consumes
     BaseIntermediateOutputPath, and setting it inside the .csproj is too late (MSB3539).
@@ -25,11 +44,11 @@
     down to referenced projects, keeping Core's obj separated per version too.
   -->
   <PropertyGroup Condition="'$(RevitVersion)' != ''">
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\rvt$(RevitVersion)\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\$(_StoreObj)rvt$(RevitVersion)\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(NavisVersion)' != ''">
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\nw$(NavisVersion)\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\$(_StoreObj)nw$(NavisVersion)\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
   <!--

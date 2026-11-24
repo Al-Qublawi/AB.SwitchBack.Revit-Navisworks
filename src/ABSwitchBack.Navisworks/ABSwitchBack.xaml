@@ -42,6 +42,12 @@
                               ShowText="True"
                               Orientation="Vertical" />
 
+        <local:NWRibbonButton x:Uid="ABSB_Help" Id="ID_ABSB_Help"
+                              Size="Large"
+                              KeyTip="HE"
+                              ShowText="True"
+                              Orientation="Vertical" />
+
       </RibbonPanelSource>
     </RibbonPanel>
 

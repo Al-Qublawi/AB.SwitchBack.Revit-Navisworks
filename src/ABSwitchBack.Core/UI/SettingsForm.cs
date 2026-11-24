@@ -40,7 +40,9 @@ namespace ABSwitchBack.Core.UI
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Font;
             Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(470, 496);
+            // The store build has no update check, so it has no row for it either.
+            int lift = Branding.IsStoreBuild ? 48 : 0;
+            ClientSize = new Size(470, 496 - lift);
 
             // ---------------------------------------------------------- trigger
             var triggerGroup = new GroupBox
@@ -163,7 +165,7 @@ namespace ABSwitchBack.Core.UI
             var reset = new Button
             {
                 Text = "Reset to defaults",
-                Location = new Point(12, 432),
+                Location = new Point(12, 432 - lift),
                 Size = new Size(130, 28)
             };
             reset.Click += (s, e) => LoadValues(new SwitchBackConfig());
@@ -171,7 +173,7 @@ namespace ABSwitchBack.Core.UI
             var save = new Button
             {
                 Text = "Save",
-                Location = new Point(268, 432),
+                Location = new Point(268, 432 - lift),
                 Size = new Size(90, 28),
                 DialogResult = DialogResult.OK
             };
@@ -180,7 +182,7 @@ namespace ABSwitchBack.Core.UI
             var cancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(368, 432),
+                Location = new Point(368, 432 - lift),
                 Size = new Size(90, 28),
                 DialogResult = DialogResult.Cancel
             };
@@ -188,7 +190,7 @@ namespace ABSwitchBack.Core.UI
             var pathHint = new Label
             {
                 Text = Paths.ConfigFile,
-                Location = new Point(12, 468),
+                Location = new Point(12, 468 - lift),
                 Size = new Size(446, 20),
                 ForeColor = SystemColors.GrayText,
                 AutoEllipsis = true
@@ -196,8 +198,9 @@ namespace ABSwitchBack.Core.UI
 
             Controls.AddRange(new Control[]
             {
-                triggerGroup, revitGroup, _checkUpdates, updateHint, reset, save, cancel, pathHint
+                triggerGroup, revitGroup, reset, save, cancel, pathHint
             });
+            if (!Branding.IsStoreBuild) Controls.AddRange(new Control[] { _checkUpdates, updateHint });
 
             AcceptButton = save;
             CancelButton = cancel;
@@ -293,7 +296,7 @@ namespace ABSwitchBack.Core.UI
             _config.CreateSectionBox = _sectionBox.Checked;
             _config.SectionBoxMarginMm = (double)_margin.Value;
             _config.CreateViewIfMissing = _createView.Checked;
-            _config.CheckForUpdates = _checkUpdates.Checked;
+            if (!Branding.IsStoreBuild) _config.CheckForUpdates = _checkUpdates.Checked;
             _config.Save();
 
             Log.Info("Settings saved. Trigger=" + _config.Trigger +

@@ -18,7 +18,7 @@
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>x64</PlatformTarget>
 
-    <OutputPath>$(RepoRoot)artifacts\Navisworks\$(NavisVersion)\ABSwitchBack\</OutputPath>
+    <OutputPath>$(ArtifactsDir)Navisworks\$(NavisVersion)\ABSwitchBack\</OutputPath>
     <DefineConstants>$(DefineConstants);NAVIS$(NavisVersion)</DefineConstants>
   </PropertyGroup>
 
@@ -123,10 +123,28 @@
     assembly - en-US\ABSwitchBack.xaml - not in the assembly folder itself. Putting the
     file next to the DLL means the tab silently never appears.
   -->
-  <Target Name="CopyRibbonLayout" AfterTargets="Build">
+  <Target Name="CopyRibbonLayout" AfterTargets="Build" Condition="'$(StoreBuild)' != 'true'">
     <Copy SourceFiles="ABSwitchBack.xaml"
           DestinationFolder="$(OutputPath)en-US"
           SkipUnchangedFiles="true" />
+  </Target>
+
+  <!--
+    Store build: the same layout without the shared AB Adv Tools panel (About, Check for Updates,
+    LinkedIn) - the Marketplace forbids an app's own update mechanism. The panel is cut between
+    its BEGIN/END markers, so the source XAML stays the one sync-kit.ps1 maintains, and the build
+    fails if the markers are ever lost rather than shipping the update button.
+  -->
+  <Target Name="CopyStoreRibbonLayout" AfterTargets="Build" Condition="'$(StoreBuild)' == 'true'">
+    <PropertyGroup>
+      <_RibbonText>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\ABSwitchBack.xaml'))</_RibbonText>
+      <_StoreRibbonText>$([System.Text.RegularExpressions.Regex]::Replace($(_RibbonText), '[ \t]*&lt;!-- BEGIN AB ADV TOOLS SHARED PANEL[\s\S]*?&lt;!-- END AB ADV TOOLS SHARED PANEL --&gt;\r?\n', ''))</_StoreRibbonText>
+    </PropertyGroup>
+    <Error Condition="$(_StoreRibbonText.Contains('ABADV_SharedPanel')) Or $(_StoreRibbonText.Contains('ID_ABADV_'))"
+           Text="Store build: the shared AB Adv Tools panel could not be removed from ABSwitchBack.xaml (its BEGIN/END markers changed)." />
+    <MakeDir Directories="$(OutputPath)en-US" />
+    <!-- Escaped, or WriteLinesToFile would split the text at every ';' (the xmlns lines). -->
+    <WriteLinesToFile File="$(OutputPath)en-US\ABSwitchBack.xaml" Lines="$([MSBuild]::Escape($(_StoreRibbonText)))" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="utf-8" />
   </Target>
 
   <Target Name="ReportNavisApiSource" BeforeTargets="BeforeBuild">

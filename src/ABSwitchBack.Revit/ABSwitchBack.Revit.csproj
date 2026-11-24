@@ -19,7 +19,7 @@
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>x64</PlatformTarget>
 
-    <OutputPath>$(RepoRoot)artifacts\Revit\$(RevitVersion)\</OutputPath>
+    <OutputPath>$(ArtifactsDir)Revit\$(RevitVersion)\</OutputPath>
 
     <DefineConstants>$(DefineConstants);REVIT$(RevitVersion)</DefineConstants>
   </PropertyGroup>

@@ -44,10 +44,16 @@ namespace ABSwitchBack.Navisworks
                     ABSwitchBack.Core.Branding.ProductName,
                     ABSwitchBack.Core.Branding.Tagline,
                     AdvToolsHost.Navisworks,
-                    ABSwitchBack.Core.Branding.GitHubRepository,
+                    ABSwitchBack.Core.Branding.ReleaseRepository,
                     typeof(SwitchBackWatcher).Assembly)
                 {
-                    AutomaticChecksAllowed = delegate { return ABSwitchBack.Core.SwitchBackConfig.Load().CheckForUpdates; },
+                    // A store build has no release channel (Branding.ReleaseRepository is null), so
+                    // nothing ever asks GitHub; its ribbon also leaves out the shared panel.
+                    AutomaticChecksAllowed = delegate
+                    {
+                        return !ABSwitchBack.Core.Branding.IsStoreBuild &&
+                               ABSwitchBack.Core.SwitchBackConfig.Load().CheckForUpdates;
+                    },
                     UpdateSettingsHint = "SwitchBack Settings",
 
                     // What SwitchBack's own About said before it joined the suite.
@@ -74,6 +80,10 @@ namespace ABSwitchBack.Navisworks
     /// The tab id, and the About / Check for Updates / LinkedIn commands, are the suite's
     /// (NavisworksAdvTools); every AB plugin declares the same ones, and the kit merges
     /// their tabs into one at startup.
+    ///
+    /// A store build (STORE_BUILD) declares none of the shared commands, and its ribbon XAML is
+    /// written without the shared panel (see the .csproj): the Marketplace forbids an app's own
+    /// update mechanism. Another AB plugin installed beside it still brings that panel.
     /// </summary>
     [Plugin("ABSwitchBack.Ribbon", "ABSB",
         DisplayName = "AB SwitchBack",
@@ -95,6 +105,12 @@ namespace ABSwitchBack.Navisworks
         Icon = "status_16.ico", LargeIcon = "status_32.ico",
         LoadForCanExecute = true,
         ToolTip = "Show the SwitchBack connection status and open the log folder.")]
+    [Command("ID_ABSB_Help",
+        DisplayName = "Help",
+        Icon = NavisworksAdvTools.AboutIcon, LargeIcon = NavisworksAdvTools.AboutLargeIcon,
+        LoadForCanExecute = true,
+        ToolTip = "Open the AB SwitchBack user guide.")]
+#if !STORE_BUILD
     [Command(NavisworksAdvTools.AboutCommandId,
         DisplayName = NavisworksAdvTools.AboutText,
         Icon = NavisworksAdvTools.AboutIcon, LargeIcon = NavisworksAdvTools.AboutLargeIcon,
@@ -107,13 +123,16 @@ namespace ABSwitchBack.Navisworks
         DisplayName = NavisworksAdvTools.LinkedInText,
         Icon = NavisworksAdvTools.LinkedInIcon, LargeIcon = NavisworksAdvTools.LinkedInLargeIcon,
         ToolTip = NavisworksAdvTools.LinkedInToolTip)]
+#endif
     public sealed class SwitchBackRibbonPlugin : CommandHandlerPlugin
     {
         public override int ExecuteCommand(string commandId, params string[] parameters)
         {
             try
             {
+#if !STORE_BUILD
                 if (NavisworksAdvTools.TryExecuteSharedCommand(commandId)) return 0;
+#endif
 
                 switch (commandId)
                 {
@@ -127,6 +146,10 @@ namespace ABSwitchBack.Navisworks
 
                     case "ID_ABSB_Status":
                         ShowStatus();
+                        break;
+
+                    case "ID_ABSB_Help":
+                        ABSwitchBack.Core.Branding.OpenHelp();
                         break;
                 }
             }

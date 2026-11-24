@@ -159,9 +159,12 @@ namespace ABSwitchBack.Core
                 sb.AppendLine("# Trigger gesture: Ctrl, Alt or Ctrl+Alt plus a left click.");
                 sb.AppendLine("# Use None to send every element you select. Shift is not supported.");
                 sb.AppendLine("Trigger=Ctrl");
-                sb.AppendLine("# Ask GitHub once a day whether a newer release exists.");
-                sb.AppendLine("# One anonymous GET to the public releases API; nothing is uploaded.");
-                sb.AppendLine("CheckForUpdates=true");
+                if (!Branding.IsStoreBuild)
+                {
+                    sb.AppendLine("# Ask GitHub once a day whether a newer release exists.");
+                    sb.AppendLine("# One anonymous GET to the public releases API; nothing is uploaded.");
+                    sb.AppendLine("CheckForUpdates=true");
+                }
                 sb.AppendLine("# Named pipe connect/response timeout.");
                 sb.AppendLine("PipeTimeoutMs=3000");
                 File.WriteAllText(Paths.ConfigFile, sb.ToString(), Encoding.UTF8);
@@ -196,7 +199,7 @@ namespace ABSwitchBack.Core
                     additions.AppendLine("CreateViewIfMissing=true");
                 }
 
-                if (!HasKey(lines, "CheckForUpdates"))
+                if (!Branding.IsStoreBuild && !HasKey(lines, "CheckForUpdates"))
                 {
                     additions.AppendLine();
                     additions.AppendLine("# Ask GitHub once a day whether a newer release exists.");
