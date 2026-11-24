@@ -7,9 +7,10 @@
   <PropertyGroup>
     <RevitVersion Condition="'$(RevitVersion)' == ''">2024</RevitVersion>
 
-    <!-- Revit 2020-2024 run on .NET Framework; 2025+ run on .NET 8. -->
+    <!-- Revit 2020-2024 run on .NET Framework; 2025-2026 on .NET 8; 2027 on .NET 10. -->
     <TargetFramework Condition="'$(RevitVersion)' &lt; '2025'">net48</TargetFramework>
-    <TargetFramework Condition="'$(RevitVersion)' &gt;= '2025'">net8.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(RevitVersion)' &gt;= '2025' And '$(RevitVersion)' &lt; '2027'">net8.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(RevitVersion)' &gt;= '2027'">net10.0-windows</TargetFramework>
 
     <AssemblyName>ABSwitchBack.Revit</AssemblyName>
     <RootNamespace>ABSwitchBack.Revit</RootNamespace>

@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 
 # The releases a package is built for. These are what the NuGet reference assemblies
 # cover, so nothing here depends on what happens to be installed on the build machine.
-$script:RevitYears  = 2020..2026
+$script:RevitYears  = 2020..2027
 $script:NavisYears  = 2024..2027
 $script:NavisProducts = @('Manage', 'Simulate')
 
@@ -123,8 +123,8 @@ function Get-RevitInstalls {
             $found += [pscustomobject]@{
                 Year    = $year
                 Path    = $path
-                # Revit 2025 moved the add-in runtime from .NET Framework to .NET 8.
-                Runtime = $(if ($year -ge 2025) { 'net8.0-windows' } else { 'net48' })
+                # Revit 2025 moved the add-in runtime from .NET Framework to .NET 8, and 2027 to .NET 10.
+                Runtime = $(if ($year -ge 2027) { 'net10.0-windows' } elseif ($year -ge 2025) { 'net8.0-windows' } else { 'net48' })
             }
         }
     }

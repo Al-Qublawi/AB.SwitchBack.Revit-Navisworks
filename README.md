@@ -16,13 +16,14 @@ comes to the foreground.
 
 ## Version support
 
-**Revit 2020–2026** and **Navisworks 2024–2027**. Every one is built and shipped in the
+**Revit 2020–2027** and **Navisworks 2024–2027**. Every one is built and shipped in the
 installer; there is one binary per release.
 
 | Host | Releases | Runtime | API difference handled |
 |---|---|---|---|
 | Revit | 2020 – 2024 | .NET Framework 4.8 | `ElementId(int)` / `IntegerValue` |
 | Revit | 2025 – 2026 | .NET 8 | `ElementId(long)` / `.Value` — the `int` overloads were **removed** in 2025 |
+| Revit | 2027 | .NET 10 | as 2025 – 2026 |
 | Navisworks | 2024 – 2025 | .NET Framework 4.8 | `VariantData` has `IsInt32` only |
 | Navisworks | 2026 – 2027 | .NET Framework 4.8 | `VariantData` **gained** `IsInt64`, `IsNat32`, `IsNat64` in 2026 |
 
@@ -109,7 +110,7 @@ Navisworks instances coexist.
 powershell -ExecutionPolicy Bypass -File build\build.ps1
 ```
 
-Builds all 11 targets: Revit 2020-2026 and Navisworks 2024-2027. No Autodesk product
+Builds all 12 targets: Revit 2020-2027 and Navisworks 2024-2027. No Autodesk product
 needs to be installed.
 
 Build one target only:
@@ -164,7 +165,7 @@ msiexec /x AB.SwitchBack-1.3.1.msi /qn                          :: uninstall
 msiexec /i AB.SwitchBack-1.3.1.msi /l*v setup.log               :: with a log
 ```
 
-Release properties: `REVIT2020` … `REVIT2026`, `NWMANAGE2024` … `NWMANAGE2027`,
+Release properties: `REVIT2020` … `REVIT2027`, `NWMANAGE2024` … `NWMANAGE2027`,
 `NWSIMULATE2024` … `NWSIMULATE2027`; `ALLRELEASES=1` ticks every built release.
 
 To see what the package would do on a machine without changing anything:
