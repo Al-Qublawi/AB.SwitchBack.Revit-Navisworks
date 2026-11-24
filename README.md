@@ -157,12 +157,12 @@ It never closes Revit or Navisworks for you: if they hold SwitchBack's files, Wi
 close them (or to finish after a restart), so nobody loses unsaved work.
 
 ```bash
-msiexec /i AB.SwitchBack-1.3.1.msi /qn                          :: Everyone (elevated prompt)
-msiexec /i AB.SwitchBack-1.3.1.msi /qn MSIINSTALLPERUSER=1      :: Only me (Revit only)
-msiexec /i AB.SwitchBack-1.3.1.msi /qn REVIT2021=0 NWMANAGE2027=0   :: leave releases out
-msiexec /i AB.SwitchBack-1.3.1.msi /qn KEEPEARLIER=1            :: keep a Setup.exe copy (not recommended)
-msiexec /x AB.SwitchBack-1.3.1.msi /qn                          :: uninstall
-msiexec /i AB.SwitchBack-1.3.1.msi /l*v setup.log               :: with a log
+msiexec /i AB.SwitchBack-1.4.0.msi /qn                          :: Everyone (elevated prompt)
+msiexec /i AB.SwitchBack-1.4.0.msi /qn MSIINSTALLPERUSER=1      :: Only me (Revit only)
+msiexec /i AB.SwitchBack-1.4.0.msi /qn REVIT2021=0 NWMANAGE2027=0   :: leave releases out
+msiexec /i AB.SwitchBack-1.4.0.msi /qn KEEPEARLIER=1            :: keep a Setup.exe copy (not recommended)
+msiexec /x AB.SwitchBack-1.4.0.msi /qn                          :: uninstall
+msiexec /i AB.SwitchBack-1.4.0.msi /l*v setup.log               :: with a log
 ```
 
 Release properties: `REVIT2020` … `REVIT2027`, `NWMANAGE2024` … `NWMANAGE2027`,
@@ -173,6 +173,23 @@ To see what the package would do on a machine without changing anything:
 ```bash
 powershell -ExecutionPolicy Bypass -File build\make-installer.ps1 -DryRun
 ```
+
+## Autodesk Marketplace build
+
+```bash
+powershell -ExecutionPolicy Bypass -File build\make-bundle.ps1
+```
+
+Produces `dist\bundle\ABSwitchBack.bundle` and `ABSwitchBack-<version>.bundle.zip`, the package
+uploaded to the Marketplace. Autodesk builds the store installer from it. Every release is built with
+`-StoreBuild` (`STORE_BUILD`): the Marketplace forbids an app's own update mechanism, so that build
+has no GitHub release check, does not build the shared AB Adv Tools panel (Check for Updates) and has
+no update option in Settings. The script refuses a DLL without the store stamp. The user guide and
+privacy policy in `help\` ship in the bundle. Submission steps and listing text:
+[`store/SUBMISSION.md`](store/SUBMISSION.md).
+
+The bundle and the `.msi` register the same Revit add-in and Navisworks plugin. Install one or the
+other.
 
 ## Install from source (developer machine)
 
@@ -211,13 +228,14 @@ In both applications SwitchBack's buttons are on the **AB Adv Tools** ribbon tab
 AB add-in shares. The tab ends with the suite's **AB Adv Tools** panel: **About** (every AB
 tool loaded, with versions), **Check for Updates** and **LinkedIn**.
 
-Navisworks drives; Revit only receives, so its SwitchBack panel is one diagnostic button:
+Navisworks drives; Revit only receives, so its SwitchBack panel is a diagnostic button and Help:
 
 | Button | Navisworks | Revit |
 |---|---|---|
 | **Revit Target** | choose the destination Revit | — |
 | **Settings** | trigger gesture, on/off, section box options | — |
 | **Status and Log** | listener and trigger state, log folder | listener state, the settings in force, running Navisworks instances with a connection **Test**, log folder |
+| **Help** | the installed user guide, or this page when none is installed | the same; also **F1** over a SwitchBack button |
 
 ### How the clicked element is identified
 
