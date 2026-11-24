@@ -135,12 +135,6 @@ namespace ABSwitchBack.Navisworks
                 return;
             }
 
-            if (TriggerGesture.IsReservedByNavisworks(_watcher.Trigger))
-            {
-                Log.Warn("Trigger includes Ctrl+Shift. Navisworks reserves that combination and " +
-                         "expands the pick to the whole model file; Ctrl+Click is recommended.");
-            }
-
             Log.Info("Trigger gesture: " + TriggerGesture.Describe(_watcher.Trigger));
         }
 

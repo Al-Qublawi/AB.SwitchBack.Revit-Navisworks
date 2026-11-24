@@ -300,13 +300,15 @@ Everything is configured from Navisworks, because that is where the workflow sta
 only receives, so it carries no Settings button; its **Status and Log** dialog shows the
 settings currently in force, read-only.
 
-The trigger is any combination of **Ctrl**, **Shift** and **Alt** plus a left click, ticked
-from checkboxes, and the whole thing can be switched off. The dialog previews the gesture as
-you build it and warns you about the two combinations worth knowing:
+The trigger is **Ctrl**, **Alt** or **Ctrl+Alt** plus a left click, ticked from checkboxes,
+and the whole thing can be switched off. The dialog previews the gesture as you build it.
+Ticking neither box sends *every* element you select — useful for a dedicated coordination
+session, noisy the rest of the time — and the dialog warns you about it.
 
-- **Ctrl+Shift** is reserved by Navisworks and expands the pick to the whole model file.
-- **No modifier at all** sends *every* element you select — useful for a dedicated
-  coordination session, noisy the rest of the time.
+**Shift is not offered.** Navisworks reserves Ctrl+Shift+Click and expands the pick to the
+whole model file, so a click with Shift held never triggers a switch-back. A `config.txt`
+from an earlier version that included Shift still loads: Shift is dropped (`Ctrl+Shift`
+becomes `Ctrl`, `Shift+Alt` becomes `Alt`).
 
 Changes apply immediately; nothing needs restarting. Revit re-reads the config on every
 switch-back, so the Revit-side options take effect on the very next click.
@@ -321,7 +323,7 @@ switch-back, so the Revit-side options take effect on the very next click.
 | `CreateSectionBox` | `true` | `false` = select and zoom only |
 | `CreateViewIfMissing` | `true` | `false` = never create a 3D view (see *What it changes in your model*) |
 | `TriggerEnabled` | `true` | `false` disables the trigger entirely |
-| `Trigger` | `Ctrl` | Any combination of `Ctrl`, `Shift`, `Alt` (e.g. `Ctrl+Alt`), or `None`. Anything unrecognised falls back to `Ctrl` |
+| `Trigger` | `Ctrl` | `Ctrl`, `Alt`, `Ctrl+Alt` or `None`. Anything unrecognised falls back to `Ctrl`; `Shift` from older files is dropped |
 | `CheckForUpdates` | `true` | `false` stops the daily GitHub version check entirely |
 | `PipeTimeoutMs` | `3000` | Connect/response timeout |
 
@@ -371,7 +373,7 @@ has to be exercised by hand.
 
 | Symptom | Cause |
 |---|---|
-| "The click selected the whole model file" | `Trigger=CtrlShift` (Navisworks reserves it), or Selection Resolution is set to File in Options → Interface → Selection |
+| "The click selected the whole model file" | Selection Resolution is set to File in Options → Interface → Selection |
 | Nothing happens on Ctrl+Click | Check `SwitchBack Status` — the trigger may be off, or `TriggerEnabled=false` |
 | "No Revit instance found" | Revit is not running, or the add-in did not load — check the Revit log |
 | "Element not found in the active project" | The Navisworks model came from a different project, or the id belongs to a link |
