@@ -34,7 +34,11 @@ param(
     # Split on commas as well: started with  powershell -File , "2024,2026" arrives as one string.
     [string[]]$RevitYears,
     [string[]]$NavisYears,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+
+    # The private store repository (AB.SwitchBack.Store): store.psd1 with the product codes, App ID and
+    # contact details. Default: $env:AB_SWITCHBACK_STORE, else a clone beside this repository.
+    [string]$StoreDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,7 +59,15 @@ $repoRoot  = Split-Path -Parent $PSScriptRoot
 $artifacts = Join-Path $repoRoot 'artifacts\store'
 $outRoot   = Join-Path $repoRoot 'dist\bundle'
 $bundle    = Join-Path $outRoot 'ABSwitchBack.bundle'
-$store     = Import-PowerShellDataFile (Join-Path $repoRoot 'store\store.psd1')
+if (-not $StoreDir) { $StoreDir = $env:AB_SWITCHBACK_STORE }
+if (-not $StoreDir) { $StoreDir = Join-Path (Split-Path -Parent $repoRoot) 'AB.SwitchBack.Store' }
+$storeFile = Join-Path $StoreDir 'store.psd1'
+if (-not (Test-Path $storeFile)) {
+    Write-Host "   [fail] $storeFile not found. Clone the private AB.SwitchBack.Store repository beside this one," -ForegroundColor Red
+    Write-Host '          or pass -StoreDir / set AB_SWITCHBACK_STORE.' -ForegroundColor Red
+    exit 1
+}
+$store     = Import-PowerShellDataFile $storeFile
 $utf8      = New-Object System.Text.UTF8Encoding($false)
 
 function Step($t) { Write-Host ''; Write-Host "== $t" -ForegroundColor Cyan }

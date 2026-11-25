@@ -185,8 +185,9 @@ uploaded to the Marketplace. Autodesk builds the store installer from it. Every 
 `-StoreBuild` (`STORE_BUILD`): the Marketplace forbids an app's own update mechanism, so that build
 has no GitHub release check, does not build the shared AB Adv Tools panel (Check for Updates) and has
 no update option in Settings. The script refuses a DLL without the store stamp. The user guide and
-privacy policy in `help\` ship in the bundle. Submission steps and listing text:
-[`store/SUBMISSION.md`](store/SUBMISSION.md).
+privacy policy in `help\` ship in the bundle. The store settings (product codes, App ID), the
+submission steps and the listing are kept in the publisher's private `AB.SwitchBack.Store`
+repository; clone it beside this one (or pass `-StoreDir`) before running the script.
 
 The bundle and the `.msi` register the same Revit add-in and Navisworks plugin. Install one or the
 other.
