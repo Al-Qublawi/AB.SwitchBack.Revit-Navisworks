@@ -419,21 +419,25 @@ namespace ABSwitchBack.SelfTest
         private static void TestTriggerParsing()
         {
             // input, expected canonical form. Anything unrecognised must fall back to Ctrl,
-            // so a typo in config.txt can never silently disable the modifier or select the
-            // Ctrl+Shift gesture that Navisworks reserves.
+            // so a typo in config.txt can never silently disable the modifier. Shift is no
+            // longer a modifier: values saved by older versions drop it.
             var cases = new[]
             {
                 Tuple.Create("Ctrl", "Ctrl"),
                 Tuple.Create("ctrl", "Ctrl"),
                 Tuple.Create("CONTROL", "Ctrl"),
-                Tuple.Create("CtrlShift", "Ctrl+Shift"),
-                Tuple.Create("Ctrl+Shift", "Ctrl+Shift"),
-                Tuple.Create("ctrl shift", "Ctrl+Shift"),
-                Tuple.Create("shift+ctrl", "Ctrl+Shift"),
                 Tuple.Create("Alt", "Alt"),
                 Tuple.Create("Ctrl+Alt", "Ctrl+Alt"),
-                Tuple.Create("Shift+Alt", "Shift+Alt"),
-                Tuple.Create("Ctrl+Shift+Alt", "Ctrl+Shift+Alt"),
+                Tuple.Create("alt ctrl", "Ctrl+Alt"),
+                // legacy values that included Shift
+                Tuple.Create("CtrlShift", "Ctrl"),
+                Tuple.Create("Ctrl+Shift", "Ctrl"),
+                Tuple.Create("ctrl shift", "Ctrl"),
+                Tuple.Create("shift+ctrl", "Ctrl"),
+                Tuple.Create("Shift+Alt", "Alt"),
+                Tuple.Create("Ctrl+Shift+Alt", "Ctrl+Alt"),
+                Tuple.Create("Shift", "Ctrl"),
+                Tuple.Create("Shift+banana", "Ctrl"),
                 Tuple.Create("None", "None"),
                 Tuple.Create("none", "None"),
                 Tuple.Create("nonsense", "Ctrl"),
@@ -457,9 +461,12 @@ namespace ABSwitchBack.SelfTest
 
             // Every combination the settings dialog can produce must survive a save/load.
             bool roundTrips = true;
-            for (int bits = 0; bits < 8; bits++)
+            foreach (var modifiers in new[]
             {
-                var modifiers = (TriggerModifiers)bits;
+                TriggerModifiers.None, TriggerModifiers.Ctrl, TriggerModifiers.Alt,
+                TriggerModifiers.Ctrl | TriggerModifiers.Alt
+            })
+            {
                 TriggerModifiers back = TriggerGesture.Parse(TriggerGesture.Format(modifiers));
                 if (back != modifiers)
                 {
@@ -467,19 +474,14 @@ namespace ABSwitchBack.SelfTest
                     roundTrips = false;
                 }
             }
-            Check("all 8 modifier combinations round-trip through config", roundTrips);
-
-            Check("Ctrl+Shift is flagged as reserved by Navisworks",
-                  TriggerGesture.IsReservedByNavisworks(TriggerModifiers.Ctrl | TriggerModifiers.Shift));
-            Check("Ctrl alone is not flagged as reserved",
-                  !TriggerGesture.IsReservedByNavisworks(TriggerModifiers.Ctrl));
+            Check("all 4 modifier combinations round-trip through config", roundTrips);
 
             Check("no-modifier gesture is described clearly",
                   TriggerGesture.Describe(TriggerModifiers.None) == "Left Click (no modifier)");
             Check("Ctrl gesture is described clearly",
                   TriggerGesture.Describe(TriggerModifiers.Ctrl) == "Ctrl+Left Click");
 
-            // The default must be Ctrl: Ctrl+Shift is reserved by Navisworks.
+            // The default must be Ctrl.
             var config = new SwitchBackConfig();
             Check("default trigger is Ctrl", config.Trigger == "Ctrl");
             Check("trigger is enabled by default", config.TriggerEnabled);

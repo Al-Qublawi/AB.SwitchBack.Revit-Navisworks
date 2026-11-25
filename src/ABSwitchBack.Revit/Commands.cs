@@ -101,4 +101,15 @@ namespace ABSwitchBack.Revit
 
     // About and LinkedIn moved to the AB Adv Tools shared panel (ABAdvTools.Revit), which
     // every AB add-in shares, so they are not repeated on SwitchBack's own panel.
+
+    /// <summary>Opens the installed user guide (or the project page when none is installed).</summary>
+    [Transaction(TransactionMode.ReadOnly)]
+    public class ShowHelpCommand : IExternalCommand
+    {
+        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+        {
+            Branding.OpenHelp();
+            return Result.Succeeded;
+        }
+    }
 }

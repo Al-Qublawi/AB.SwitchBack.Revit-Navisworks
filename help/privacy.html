@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AB SwitchBack - Privacy Policy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div>
+  <h1>AB SwitchBack - Privacy Policy</h1>
+  <p>Publisher: Abdullah Lotfy &middot; Version 1.0 &middot; Effective 24 November 2026</p>
+</div></header>
+<main>
+
+<p>AB SwitchBack is a Revit add-in and a Navisworks plugin that work as a pair: a click in Navisworks selects
+the same element in Revit. This policy explains what data they handle and where it goes. It applies to the
+version distributed through the Autodesk Design and Make Marketplace.</p>
+
+<p class="note"><b>In short:</b> AB SwitchBack sends nothing over the internet. The publisher operates no
+servers and receives no data about you, your computer or your projects. Revit and Navisworks talk to each
+other only on your own computer.</p>
+
+<h2>1. What the add-in handles, and where it stays</h2>
+<table>
+  <tr><th>Data</th><th>What it is used for</th><th>Where it is kept</th></tr>
+  <tr>
+    <td>The Revit element id of the item you click in Navisworks, and the reply from Revit</td>
+    <td>To select that element in Revit</td>
+    <td>Passed between Revit and Navisworks through a Windows named pipe that only processes on your computer
+      can open. Not stored.</td>
+  </tr>
+  <tr>
+    <td>One small file per running Revit or Navisworks session: process id, application and version, the title
+      of the open document, and the pipe name</td>
+    <td>So Navisworks can find the running Revit sessions and offer them as targets</td>
+    <td><code>%LOCALAPPDATA%\ABSwitchBack\instances</code>. Deleted when the session closes.</td>
+  </tr>
+  <tr>
+    <td>Your settings</td>
+    <td>The trigger gesture and what Revit does with an element</td>
+    <td><code>%LOCALAPPDATA%\ABSwitchBack\config.txt</code></td>
+  </tr>
+  <tr>
+    <td>Log files: element ids and names, document titles, timings and any error messages</td>
+    <td>To diagnose a problem, if you choose to send them</td>
+    <td><code>%LOCALAPPDATA%\ABSwitchBack\logs</code> and <code>%LOCALAPPDATA%\AB Adv Tools\Logs</code></td>
+  </tr>
+</table>
+
+<h2>2. What is not collected</h2>
+<ul>
+  <li>No internet connection is made. The Marketplace version has no update check, no telemetry, no analytics
+    and no licence check.</li>
+  <li>No personal information: not your name, e-mail address, Autodesk account or computer name.</li>
+  <li>Nothing from your models is copied anywhere.</li>
+</ul>
+
+<h2>3. Sharing</h2>
+<p>None. Nothing is sent to the publisher or to anyone else. If you e-mail log files for support, they are
+used only to answer your question and are deleted when it is resolved.</p>
+
+<h2>4. Keeping and removing your data</h2>
+<p>Everything listed above is on your own computer, and you may delete it at any time: remove the
+<code>%LOCALAPPDATA%\ABSwitchBack</code> and <code>%LOCALAPPDATA%\AB Adv Tools</code> folders. Uninstalling
+AB SwitchBack removes the program, not these folders.</p>
+
+<h2>5. Changes and contact</h2>
+<p>A change to this policy is published with a new version of the add-in, with a new version number and
+date above. Questions: Abdullah Lotfy, <a href="mailto:abdullah.mech93@gmail.com">abdullah.mech93@gmail.com</a>.</p>
+
+<footer><a href="index.html">User guide</a> &middot; AB SwitchBack &middot; &copy; 2026 Abdullah Lotfy</footer>
+</main>
+</body>
+</html>

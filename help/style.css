@@ -1,0 +1,20 @@
+:root { --ink: #1f2933; --muted: #5f6b7a; --line: #dce2ea; --accent: #1f6feb; --panel: #f4f6f9; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.6 "Segoe UI", system-ui, sans-serif; color: var(--ink); background: #fff; }
+header { background: #172230; color: #fff; padding: 28px 16px; }
+header div, main { max-width: 900px; margin: 0 auto; }
+header h1 { margin: 0 0 4px; font-size: 26px; font-weight: 600; }
+header p { margin: 0; color: #b9c9dc; }
+main { padding: 8px 16px 48px; }
+h2 { font-size: 20px; margin: 36px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 22px 0 4px; }
+nav { background: var(--panel); border-radius: 8px; padding: 12px 18px; margin-top: 20px; }
+nav a { color: var(--accent); text-decoration: none; margin-right: 14px; white-space: nowrap; }
+a { color: var(--accent); }
+table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: var(--panel); font-weight: 600; }
+.note { background: var(--panel); border-left: 4px solid var(--accent); padding: 10px 14px; border-radius: 4px; }
+code, kbd { background: var(--panel); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+ol li, ul li { margin: 3px 0; }
+footer { color: var(--muted); font-size: 13px; margin-top: 28px; }

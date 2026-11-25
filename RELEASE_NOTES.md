@@ -1,3 +1,24 @@
+# AB SwitchBack 1.4.0
+
+Ctrl+click an element in Navisworks and the paired Revit session selects it, section boxes it and
+zooms to it. Revit 2020 – 2027, Navisworks 2024 – 2027.
+
+## What's new
+
+- **Revit 2027.** Built for Revit 2027, which runs add-ins on .NET 10.
+- **Shift is no longer offered in the trigger.** Navisworks reserves Ctrl+Shift+Click (it selects the
+  whole model file), so Shift was only ever a way to break the gesture. Settings now offer Ctrl, Alt or
+  Ctrl+Alt. A click with Shift held never triggers a switch back. A `config.txt` that still names Shift
+  loads with it dropped: `Ctrl+Shift` becomes `Ctrl`, `Shift+Alt` becomes `Alt`.
+- **Help.** A Help button on the SwitchBack panel in both Revit and Navisworks. It opens the user guide
+  when one is installed with the add-in (the Autodesk Marketplace version), and the project page
+  otherwise. F1 over a SwitchBack button in Revit opens the guide too.
+- **On the Autodesk Marketplace.** SwitchBack is being submitted to the Marketplace as a free app. That
+  version has no GitHub update check and no Check for Updates button, as the store requires. This GitHub
+  release still has both. Install one or the other, not both.
+
+---
+
 # AB SwitchBack 1.3.1
 
 Ctrl+click an element in Navisworks and the paired Revit session selects it, section boxes it and

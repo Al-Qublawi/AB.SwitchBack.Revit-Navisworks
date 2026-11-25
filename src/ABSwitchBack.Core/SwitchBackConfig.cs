@@ -33,10 +33,9 @@ namespace ABSwitchBack.Core
         public bool TriggerEnabled { get { return GetBool("TriggerEnabled", true); } set { Set("TriggerEnabled", value); } }
 
         /// <summary>
-        /// Modifiers that trigger a switch back: any combination of Ctrl, Shift and Alt
-        /// (e.g. "Ctrl+Alt"), or "None" to send every element you select.
-        /// Ctrl+Shift is intercepted by Navisworks itself and expands the pick to the whole
-        /// model file, so it is not recommended. See <see cref="TriggerGesture"/>.
+        /// Modifiers that trigger a switch back: Ctrl, Alt or Ctrl+Alt, or "None" to send
+        /// every element you select. Shift is not supported (Navisworks reserves
+        /// Ctrl+Shift+click) and is dropped from older files. See <see cref="TriggerGesture"/>.
         /// </summary>
         public string Trigger { get { return GetString("Trigger", "Ctrl"); } set { Set("Trigger", value); } }
 
@@ -157,13 +156,15 @@ namespace ABSwitchBack.Core
                 sb.AppendLine("CreateViewIfMissing=true");
                 sb.AppendLine("# Set to false to disable the trigger gesture in Navisworks.");
                 sb.AppendLine("TriggerEnabled=true");
-                sb.AppendLine("# Trigger gesture: any combination of Ctrl, Shift and Alt plus a left click,");
-                sb.AppendLine("# e.g. Ctrl+Alt. Use None to send every element you select.");
-                sb.AppendLine("# Ctrl+Shift is intercepted by Navisworks and selects the whole file - avoid it.");
+                sb.AppendLine("# Trigger gesture: Ctrl, Alt or Ctrl+Alt plus a left click.");
+                sb.AppendLine("# Use None to send every element you select. Shift is not supported.");
                 sb.AppendLine("Trigger=Ctrl");
-                sb.AppendLine("# Ask GitHub once a day whether a newer release exists.");
-                sb.AppendLine("# One anonymous GET to the public releases API; nothing is uploaded.");
-                sb.AppendLine("CheckForUpdates=true");
+                if (!Branding.IsStoreBuild)
+                {
+                    sb.AppendLine("# Ask GitHub once a day whether a newer release exists.");
+                    sb.AppendLine("# One anonymous GET to the public releases API; nothing is uploaded.");
+                    sb.AppendLine("CheckForUpdates=true");
+                }
                 sb.AppendLine("# Named pipe connect/response timeout.");
                 sb.AppendLine("PipeTimeoutMs=3000");
                 File.WriteAllText(Paths.ConfigFile, sb.ToString(), Encoding.UTF8);
@@ -185,8 +186,8 @@ namespace ABSwitchBack.Core
                 if (!HasKey(lines, "Trigger"))
                 {
                     additions.AppendLine();
-                    additions.AppendLine("# Trigger gesture: Ctrl, CtrlShift or Alt (plus left click).");
-                    additions.AppendLine("# Ctrl+Shift is intercepted by Navisworks and selects the whole file - avoid it.");
+                    additions.AppendLine("# Trigger gesture: Ctrl, Alt or Ctrl+Alt plus a left click.");
+                    additions.AppendLine("# Use None to send every element you select. Shift is not supported.");
                     additions.AppendLine("Trigger=Ctrl");
                 }
 
@@ -198,7 +199,7 @@ namespace ABSwitchBack.Core
                     additions.AppendLine("CreateViewIfMissing=true");
                 }
 
-                if (!HasKey(lines, "CheckForUpdates"))
+                if (!Branding.IsStoreBuild && !HasKey(lines, "CheckForUpdates"))
                 {
                     additions.AppendLine();
                     additions.AppendLine("# Ask GitHub once a day whether a newer release exists.");

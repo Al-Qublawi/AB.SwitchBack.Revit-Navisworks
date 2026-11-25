@@ -221,11 +221,8 @@ namespace ABSwitchBack.Navisworks
             {
                 sb.AppendLine("The click selected the whole model file, not an element.");
                 sb.AppendLine();
-                sb.AppendLine("Usual causes:");
-                sb.AppendLine("  - The trigger is set to Ctrl+Shift+Click. Navisworks reserves that");
-                sb.AppendLine("    combination and expands the pick to the entire file. Use Ctrl+Click.");
-                sb.AppendLine("  - Selection Resolution is set to File.");
-                sb.AppendLine("    Set it to First Object or Geometry in Options > Interface > Selection.");
+                sb.AppendLine("Usual cause: Selection Resolution is set to File.");
+                sb.AppendLine("Set it to First Object or Geometry in Options > Interface > Selection.");
                 return sb.ToString();
             }
 

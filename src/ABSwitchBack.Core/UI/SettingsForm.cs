@@ -16,7 +16,6 @@ namespace ABSwitchBack.Core.UI
 
         private readonly CheckBox _enabled;
         private readonly CheckBox _ctrl;
-        private readonly CheckBox _shift;
         private readonly CheckBox _alt;
         private readonly Label _gesture;
         private readonly Label _warning;
@@ -41,7 +40,9 @@ namespace ABSwitchBack.Core.UI
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Font;
             Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(470, 496);
+            // The store build has no update check, so it has no row for it either.
+            int lift = Branding.IsStoreBuild ? 48 : 0;
+            ClientSize = new Size(470, 496 - lift);
 
             // ---------------------------------------------------------- trigger
             var triggerGroup = new GroupBox
@@ -67,10 +68,8 @@ namespace ABSwitchBack.Core.UI
             };
 
             _ctrl = new CheckBox { Text = "Ctrl", Location = new Point(30, 80), Size = new Size(80, 22) };
-            _shift = new CheckBox { Text = "Shift", Location = new Point(120, 80), Size = new Size(80, 22) };
-            _alt = new CheckBox { Text = "Alt", Location = new Point(210, 80), Size = new Size(80, 22) };
+            _alt = new CheckBox { Text = "Alt", Location = new Point(120, 80), Size = new Size(80, 22) };
             _ctrl.CheckedChanged += (s, e) => Refresh_();
-            _shift.CheckedChanged += (s, e) => Refresh_();
             _alt.CheckedChanged += (s, e) => Refresh_();
 
             _gesture = new Label
@@ -89,7 +88,7 @@ namespace ABSwitchBack.Core.UI
 
             triggerGroup.Controls.AddRange(new Control[]
             {
-                _enabled, modifierLabel, _ctrl, _shift, _alt, _gesture, _warning
+                _enabled, modifierLabel, _ctrl, _alt, _gesture, _warning
             });
 
             // ---------------------------------------------------------- revit
@@ -166,7 +165,7 @@ namespace ABSwitchBack.Core.UI
             var reset = new Button
             {
                 Text = "Reset to defaults",
-                Location = new Point(12, 432),
+                Location = new Point(12, 432 - lift),
                 Size = new Size(130, 28)
             };
             reset.Click += (s, e) => LoadValues(new SwitchBackConfig());
@@ -174,7 +173,7 @@ namespace ABSwitchBack.Core.UI
             var save = new Button
             {
                 Text = "Save",
-                Location = new Point(268, 432),
+                Location = new Point(268, 432 - lift),
                 Size = new Size(90, 28),
                 DialogResult = DialogResult.OK
             };
@@ -183,7 +182,7 @@ namespace ABSwitchBack.Core.UI
             var cancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(368, 432),
+                Location = new Point(368, 432 - lift),
                 Size = new Size(90, 28),
                 DialogResult = DialogResult.Cancel
             };
@@ -191,7 +190,7 @@ namespace ABSwitchBack.Core.UI
             var pathHint = new Label
             {
                 Text = Paths.ConfigFile,
-                Location = new Point(12, 468),
+                Location = new Point(12, 468 - lift),
                 Size = new Size(446, 20),
                 ForeColor = SystemColors.GrayText,
                 AutoEllipsis = true
@@ -199,8 +198,9 @@ namespace ABSwitchBack.Core.UI
 
             Controls.AddRange(new Control[]
             {
-                triggerGroup, revitGroup, _checkUpdates, updateHint, reset, save, cancel, pathHint
+                triggerGroup, revitGroup, reset, save, cancel, pathHint
             });
+            if (!Branding.IsStoreBuild) Controls.AddRange(new Control[] { _checkUpdates, updateHint });
 
             AcceptButton = save;
             CancelButton = cancel;
@@ -217,7 +217,6 @@ namespace ABSwitchBack.Core.UI
 
                 TriggerModifiers modifiers = TriggerGesture.Parse(config.Trigger);
                 _ctrl.Checked = (modifiers & TriggerModifiers.Ctrl) != 0;
-                _shift.Checked = (modifiers & TriggerModifiers.Shift) != 0;
                 _alt.Checked = (modifiers & TriggerModifiers.Alt) != 0;
 
                 _sectionBox.Checked = config.CreateSectionBox;
@@ -248,7 +247,6 @@ namespace ABSwitchBack.Core.UI
             {
                 var modifiers = TriggerModifiers.None;
                 if (_ctrl.Checked) modifiers |= TriggerModifiers.Ctrl;
-                if (_shift.Checked) modifiers |= TriggerModifiers.Shift;
                 if (_alt.Checked) modifiers |= TriggerModifiers.Alt;
                 return modifiers;
             }
@@ -261,7 +259,6 @@ namespace ABSwitchBack.Core.UI
 
             bool on = _enabled.Checked;
             _ctrl.Enabled = on;
-            _shift.Enabled = on;
             _alt.Enabled = on;
             _gesture.Enabled = on;
 
@@ -273,12 +270,6 @@ namespace ABSwitchBack.Core.UI
             if (!on)
             {
                 _warning.Text = string.Empty;
-            }
-            else if (TriggerGesture.IsReservedByNavisworks(modifiers))
-            {
-                _warning.Text =
-                    "Not recommended. Navisworks reserves Ctrl+Shift+click and expands the pick to " +
-                    "the whole model file, so no element id can be found.";
             }
             else if (modifiers == TriggerModifiers.None)
             {
@@ -305,7 +296,7 @@ namespace ABSwitchBack.Core.UI
             _config.CreateSectionBox = _sectionBox.Checked;
             _config.SectionBoxMarginMm = (double)_margin.Value;
             _config.CreateViewIfMissing = _createView.Checked;
-            _config.CheckForUpdates = _checkUpdates.Checked;
+            if (!Branding.IsStoreBuild) _config.CheckForUpdates = _checkUpdates.Checked;
             _config.Save();
 
             Log.Info("Settings saved. Trigger=" + _config.Trigger +

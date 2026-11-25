@@ -6,15 +6,41 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Company>ABSwitchBack</Company>
     <Product>AB SwitchBack</Product>
-    <Version>1.3.1</Version>
-    <FileVersion>1.3.1.0</FileVersion>
-    <AssemblyVersion>1.3.1.0</AssemblyVersion>
+    <Version>1.4.0</Version>
+    <FileVersion>1.4.0.0</FileVersion>
+    <AssemblyVersion>1.4.0.0</AssemblyVersion>
     <Copyright>AB SwitchBack</Copyright>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <DebugType>portable</DebugType>
     <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+  </PropertyGroup>
+
+  <!--
+    Autodesk Marketplace build: dotnet build -p:StoreBuild=true (build\make-bundle.ps1 passes it).
+    The store forbids an app carrying its own update mechanism, so a store build defines
+    STORE_BUILD, which leaves out the GitHub release check, the shared AB Adv Tools panel (its
+    Check for Updates button) and every setting about updates. Its output and intermediate files
+    go to their own folders, so a store build never mixes with the GitHub/.msi build.
+  -->
+  <PropertyGroup>
+    <StoreBuild Condition="'$(StoreBuild)' == ''">false</StoreBuild>
+    <ArtifactsDir>$(RepoRoot)artifacts\</ArtifactsDir>
+    <ArtifactsDir Condition="'$(StoreBuild)' == 'true'">$(RepoRoot)artifacts\store\</ArtifactsDir>
+    <_StoreObj Condition="'$(StoreBuild)' == 'true'">store\</_StoreObj>
+  </PropertyGroup>
+  <!-- Stamped into every store-build assembly; build\make-bundle.ps1 refuses a DLL without it. -->
+  <ItemGroup Condition="'$(StoreBuild)' == 'true'">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ABStoreBuild</_Parameter1>
+      <_Parameter2>true</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(StoreBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);STORE_BUILD</DefineConstants>
+    <!-- Core has no OutputPath of its own; keep its store build out of the normal bin folder. -->
+    <BaseOutputPath>$(MSBuildProjectDirectory)\bin\store\</BaseOutputPath>
   </PropertyGroup>
 
   <!--
@@ -25,11 +51,11 @@
     down to referenced projects, keeping Core's obj separated per version too.
   -->
   <PropertyGroup Condition="'$(RevitVersion)' != ''">
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\rvt$(RevitVersion)\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\$(_StoreObj)rvt$(RevitVersion)\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(NavisVersion)' != ''">
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\nw$(NavisVersion)\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\$(_StoreObj)nw$(NavisVersion)\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
   <!--

@@ -16,13 +16,14 @@ comes to the foreground.
 
 ## Version support
 
-**Revit 2020–2026** and **Navisworks 2024–2027**. Every one is built and shipped in the
+**Revit 2020–2027** and **Navisworks 2024–2027**. Every one is built and shipped in the
 installer; there is one binary per release.
 
 | Host | Releases | Runtime | API difference handled |
 |---|---|---|---|
 | Revit | 2020 – 2024 | .NET Framework 4.8 | `ElementId(int)` / `IntegerValue` |
 | Revit | 2025 – 2026 | .NET 8 | `ElementId(long)` / `.Value` — the `int` overloads were **removed** in 2025 |
+| Revit | 2027 | .NET 10 | as 2025 – 2026 |
 | Navisworks | 2024 – 2025 | .NET Framework 4.8 | `VariantData` has `IsInt32` only |
 | Navisworks | 2026 – 2027 | .NET Framework 4.8 | `VariantData` **gained** `IsInt64`, `IsNat32`, `IsNat64` in 2026 |
 
@@ -109,7 +110,7 @@ Navisworks instances coexist.
 powershell -ExecutionPolicy Bypass -File build\build.ps1
 ```
 
-Builds all 11 targets: Revit 2020-2026 and Navisworks 2024-2027. No Autodesk product
+Builds all 12 targets: Revit 2020-2027 and Navisworks 2024-2027. No Autodesk product
 needs to be installed.
 
 Build one target only:
@@ -156,15 +157,15 @@ It never closes Revit or Navisworks for you: if they hold SwitchBack's files, Wi
 close them (or to finish after a restart), so nobody loses unsaved work.
 
 ```bash
-msiexec /i AB.SwitchBack-1.3.1.msi /qn                          :: Everyone (elevated prompt)
-msiexec /i AB.SwitchBack-1.3.1.msi /qn MSIINSTALLPERUSER=1      :: Only me (Revit only)
-msiexec /i AB.SwitchBack-1.3.1.msi /qn REVIT2021=0 NWMANAGE2027=0   :: leave releases out
-msiexec /i AB.SwitchBack-1.3.1.msi /qn KEEPEARLIER=1            :: keep a Setup.exe copy (not recommended)
-msiexec /x AB.SwitchBack-1.3.1.msi /qn                          :: uninstall
-msiexec /i AB.SwitchBack-1.3.1.msi /l*v setup.log               :: with a log
+msiexec /i AB.SwitchBack-1.4.0.msi /qn                          :: Everyone (elevated prompt)
+msiexec /i AB.SwitchBack-1.4.0.msi /qn MSIINSTALLPERUSER=1      :: Only me (Revit only)
+msiexec /i AB.SwitchBack-1.4.0.msi /qn REVIT2021=0 NWMANAGE2027=0   :: leave releases out
+msiexec /i AB.SwitchBack-1.4.0.msi /qn KEEPEARLIER=1            :: keep a Setup.exe copy (not recommended)
+msiexec /x AB.SwitchBack-1.4.0.msi /qn                          :: uninstall
+msiexec /i AB.SwitchBack-1.4.0.msi /l*v setup.log               :: with a log
 ```
 
-Release properties: `REVIT2020` … `REVIT2026`, `NWMANAGE2024` … `NWMANAGE2027`,
+Release properties: `REVIT2020` … `REVIT2027`, `NWMANAGE2024` … `NWMANAGE2027`,
 `NWSIMULATE2024` … `NWSIMULATE2027`; `ALLRELEASES=1` ticks every built release.
 
 To see what the package would do on a machine without changing anything:
@@ -172,6 +173,24 @@ To see what the package would do on a machine without changing anything:
 ```bash
 powershell -ExecutionPolicy Bypass -File build\make-installer.ps1 -DryRun
 ```
+
+## Autodesk Marketplace build
+
+```bash
+powershell -ExecutionPolicy Bypass -File build\make-bundle.ps1
+```
+
+Produces `dist\bundle\ABSwitchBack.bundle` and `ABSwitchBack-<version>.bundle.zip`, the package
+uploaded to the Marketplace. Autodesk builds the store installer from it. Every release is built with
+`-StoreBuild` (`STORE_BUILD`): the Marketplace forbids an app's own update mechanism, so that build
+has no GitHub release check, does not build the shared AB Adv Tools panel (Check for Updates) and has
+no update option in Settings. The script refuses a DLL without the store stamp. The user guide and
+privacy policy in `help\` ship in the bundle. The store settings (product codes, App ID), the
+submission steps and the listing are kept in the publisher's private `AB.SwitchBack.Store`
+repository; clone it beside this one (or pass `-StoreDir`) before running the script.
+
+The bundle and the `.msi` register the same Revit add-in and Navisworks plugin. Install one or the
+other.
 
 ## Install from source (developer machine)
 
@@ -210,13 +229,14 @@ In both applications SwitchBack's buttons are on the **AB Adv Tools** ribbon tab
 AB add-in shares. The tab ends with the suite's **AB Adv Tools** panel: **About** (every AB
 tool loaded, with versions), **Check for Updates** and **LinkedIn**.
 
-Navisworks drives; Revit only receives, so its SwitchBack panel is one diagnostic button:
+Navisworks drives; Revit only receives, so its SwitchBack panel is a diagnostic button and Help:
 
 | Button | Navisworks | Revit |
 |---|---|---|
 | **Revit Target** | choose the destination Revit | — |
 | **Settings** | trigger gesture, on/off, section box options | — |
 | **Status and Log** | listener and trigger state, log folder | listener state, the settings in force, running Navisworks instances with a connection **Test**, log folder |
+| **Help** | the installed user guide, or this page when none is installed | the same; also **F1** over a SwitchBack button |
 
 ### How the clicked element is identified
 
@@ -300,13 +320,15 @@ Everything is configured from Navisworks, because that is where the workflow sta
 only receives, so it carries no Settings button; its **Status and Log** dialog shows the
 settings currently in force, read-only.
 
-The trigger is any combination of **Ctrl**, **Shift** and **Alt** plus a left click, ticked
-from checkboxes, and the whole thing can be switched off. The dialog previews the gesture as
-you build it and warns you about the two combinations worth knowing:
+The trigger is **Ctrl**, **Alt** or **Ctrl+Alt** plus a left click, ticked from checkboxes,
+and the whole thing can be switched off. The dialog previews the gesture as you build it.
+Ticking neither box sends *every* element you select — useful for a dedicated coordination
+session, noisy the rest of the time — and the dialog warns you about it.
 
-- **Ctrl+Shift** is reserved by Navisworks and expands the pick to the whole model file.
-- **No modifier at all** sends *every* element you select — useful for a dedicated
-  coordination session, noisy the rest of the time.
+**Shift is not offered.** Navisworks reserves Ctrl+Shift+Click and expands the pick to the
+whole model file, so a click with Shift held never triggers a switch-back. A `config.txt`
+from an earlier version that included Shift still loads: Shift is dropped (`Ctrl+Shift`
+becomes `Ctrl`, `Shift+Alt` becomes `Alt`).
 
 Changes apply immediately; nothing needs restarting. Revit re-reads the config on every
 switch-back, so the Revit-side options take effect on the very next click.
@@ -321,7 +343,7 @@ switch-back, so the Revit-side options take effect on the very next click.
 | `CreateSectionBox` | `true` | `false` = select and zoom only |
 | `CreateViewIfMissing` | `true` | `false` = never create a 3D view (see *What it changes in your model*) |
 | `TriggerEnabled` | `true` | `false` disables the trigger entirely |
-| `Trigger` | `Ctrl` | Any combination of `Ctrl`, `Shift`, `Alt` (e.g. `Ctrl+Alt`), or `None`. Anything unrecognised falls back to `Ctrl` |
+| `Trigger` | `Ctrl` | `Ctrl`, `Alt`, `Ctrl+Alt` or `None`. Anything unrecognised falls back to `Ctrl`; `Shift` from older files is dropped |
 | `CheckForUpdates` | `true` | `false` stops the daily GitHub version check entirely |
 | `PipeTimeoutMs` | `3000` | Connect/response timeout |
 
@@ -371,7 +393,7 @@ has to be exercised by hand.
 
 | Symptom | Cause |
 |---|---|
-| "The click selected the whole model file" | `Trigger=CtrlShift` (Navisworks reserves it), or Selection Resolution is set to File in Options → Interface → Selection |
+| "The click selected the whole model file" | Selection Resolution is set to File in Options → Interface → Selection |
 | Nothing happens on Ctrl+Click | Check `SwitchBack Status` — the trigger may be off, or `TriggerEnabled=false` |
 | "No Revit instance found" | Revit is not running, or the add-in did not load — check the Revit log |
 | "Element not found in the active project" | The Navisworks model came from a different project, or the id belongs to a link |
